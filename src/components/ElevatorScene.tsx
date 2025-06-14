@@ -20,7 +20,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
       setCurrentFloor(floor);
       setIsMoving(false);
       
-      if (floor === 13) {
+      if (floor === 5) {
         setTimeout(() => {
           onReachClubFloor();
         }, 1500);
@@ -54,7 +54,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
             {isMoving ? (
               <div className="animate-pulse">...</div>
             ) : (
-              currentFloor === 13 ? 'B1' : currentFloor.toString().padStart(2, '0')
+              currentFloor === 5 ? 'B1' : currentFloor.toString().padStart(2, '0')
             )}
           </div>
         </div>
@@ -63,7 +63,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
       {/* Elevator panel */}
       <div className="absolute right-8 top-1/2 transform -translate-y-1/2 bg-black/90 rounded-lg p-6 border border-amber-600/30">
         <div className="grid grid-cols-3 gap-3">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((floor) => (
+          {[1, 2, 3, 4].map((floor) => (
             <button
               key={floor}
               onClick={() => goToFloor(floor)}
@@ -79,10 +79,10 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
           ))}
           {/* Club floor button (B1) */}
           <button
-            onClick={() => goToFloor(13)}
+            onClick={() => goToFloor(5)}
             disabled={isMoving || !showFloorButtons}
             className={`col-span-3 h-10 rounded-full border text-sm font-medium transition-all duration-300 ${
-              currentFloor === 13
+              currentFloor === 5
                 ? 'bg-purple-500 border-purple-400 text-white animate-pulse'
                 : 'bg-gray-800 border-purple-500/50 text-purple-400 hover:bg-purple-900/30'
             } ${(!showFloorButtons || isMoving) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
@@ -107,7 +107,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
       {isMoving && (
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-black/80 rounded-lg px-6 py-3 border border-amber-600/50">
           <div className="text-amber-400 text-center font-medium">
-            {currentFloor === 13 ? 'Descending to Club...' : `Moving to Floor ${currentFloor === 13 ? 'B1' : currentFloor}...`}
+            {currentFloor === 5 ? 'Descending to Club...' : `Moving to Floor ${currentFloor === 5 ? 'B1' : currentFloor}...`}
           </div>
         </div>
       )}
