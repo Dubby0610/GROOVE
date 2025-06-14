@@ -3,8 +3,12 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-
-const AlleyScene: React.FC = () => {
+interface AlleySceneProps {
+  onEnterBuilding: () => void;
+}
+const AlleyScene: React.FC<AlleySceneProps> = ({
+  onEnterBuilding,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -68,7 +72,7 @@ const AlleyScene: React.FC = () => {
       console.log("Animations:", object.animations);
     });
 
-    const keys = { w: false, a: false, s: false, d: false };
+    const keys = { w: false, a: false, s: false, d: false, e: false };
     const speed = 0.1; // Adjust as needed
     // const clock = new THREE.Clock();
 
@@ -117,6 +121,12 @@ const AlleyScene: React.FC = () => {
 
         // console.log(direction.multiplyScalar(4))
         }
+        if (keys.e) {
+          if(human.position.x < 10 && human.position.x > 1 && human.position.z > 20 && human.position.z < 30){
+            console.log("choesejinis idiot")
+            onEnterBuilding();
+          }
+        }
         if (keys.d) {
           human.rotation.y -= speed;
           moved = true;
@@ -141,9 +151,9 @@ const AlleyScene: React.FC = () => {
         direction.applyQuaternion(human.quaternion);   // Rotate direction by human's rotation
 
         // console.log(direction.multiplyScalar(4))
-        camera.position.x = human.position.x + direction.multiplyScalar(4).x;
+        camera.position.x = human.position.x;
         camera.position.y = human.position.y + 12;
-        camera.position.z = human.position.z + direction.multiplyScalar(4).z;
+        camera.position.z = human.position.z - 20;
         // (human.position.x, human.position.y + 12, human.position.z - 16);
         // (human.position.x, human.position.y + 12, human.position.z - 16);
         camera.lookAt(human.position)

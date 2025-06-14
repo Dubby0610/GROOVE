@@ -30,7 +30,9 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gradient-to-b from-purple-900/30 to-black">
       {/* Three.js scene */}
-      <ThreeAlleyScene />
+      <ThreeAlleyScene 
+        onEnterBuilding={onEnterBuilding}
+      />
       
       {/* Overlay elements */}
       <div className="absolute inset-0 pointer-events-none">
@@ -93,7 +95,7 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       </div>
       
       {/* Interactive hotspot for building entrance */}
-      <InteractiveHotspot
+      {/* <InteractiveHotspot
         x={35}
         y={60}
         width={30}
@@ -101,7 +103,7 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         onClick={onEnterBuilding}
         hoverText="Enter the building"
         className="z-10"
-      />
+      /> */}
     </div>
   );
 };
