@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { InteractiveHotspot } from './InteractiveHotspot';
 import ThreeAlleyScene from './ThreeAlleyScene';
 
 interface AlleySceneProps {
@@ -94,16 +93,6 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         </div>
       </div>
       
-      {/* Interactive hotspot for building entrance */}
-      {/* <InteractiveHotspot
-        x={35}
-        y={60}
-        width={30}
-        height={40}
-        onClick={onEnterBuilding}
-        hoverText="Enter the building"
-        className="z-10"
-      /> */}
     </div>
   );
 };

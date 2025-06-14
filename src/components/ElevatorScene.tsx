@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { InteractiveHotspot } from './InteractiveHotspot';
 
 interface ElevatorSceneProps {
   onReachClubFloor: () => void;
 }
 
 export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }) => {
+  console.log("In elevator~!~!~!~!~!~!~!~!~!~!~!~!~~!");
   const [currentFloor, setCurrentFloor] = useState(1);
   const [isMoving, setIsMoving] = useState(false);
   const [showFloorButtons, setShowFloorButtons] = useState(true);

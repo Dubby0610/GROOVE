@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
@@ -10,7 +10,8 @@ interface AlleySceneProps {
 
 const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [showEnterPrompt, setShowEnterPrompt] = useState(false);
+  const enterPromptRef = useRef<HTMLDivElement | null>(null);
+  const movePromptRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -76,6 +77,16 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key in keys) keys[e.key as keyof typeof keys] = false;
+      const inEnterZone =
+        human.position.x < 5 &&
+        human.position.x > -5 &&
+        human.position.z > 25 &&
+        human.position.z < 35;
+
+
+      if (e.key == 'e' && inEnterZone) {
+        onEnterBuilding();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -114,17 +125,22 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
           moved = true;
         }
 
+        // Enter zone logic
         const inEnterZone =
           human.position.x < 5 &&
           human.position.x > -5 &&
           human.position.z > 25 &&
           human.position.z < 35;
 
-        setShowEnterPrompt(inEnterZone);
-
-        if (keys.e && inEnterZone) {
-          onEnterBuilding();
+        // Show/hide enter prompt
+        if (enterPromptRef.current) {
+          enterPromptRef.current.style.display = inEnterZone ? "block" : "none";
         }
+
+        // if (keys.e && inEnterZone) {
+        //   console.log("go to elebrator!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        //   onEnterBuilding();
+        // }
 
         if (walkAction) {
           if (moved && !isWalking) {
@@ -164,7 +180,9 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   return (
     <>
       <canvas ref={canvasRef} className="webgl" />
+      {/* Movement Help */}
       <div
+        ref={movePromptRef}
         style={{
           position: "absolute",
           top: 20,
@@ -178,23 +196,24 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       >
         Move with: W A S D
       </div>
-      {showEnterPrompt && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 50,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "rgba(0,0,0,0.7)",
-            color: "#fff",
-            padding: "12px 20px",
-            borderRadius: "8px",
-            fontSize: "16px",
-          }}
-        >
-          Press "E" to enter the building
-        </div>
-      )}
+      {/* Enter Prompt (conditionally shown) */}
+      <div
+        ref={enterPromptRef}
+        style={{
+          display: "none", // hidden by default
+          position: "absolute",
+          bottom: 50,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(0,0,0,0.7)",
+          color: "#fff",
+          padding: "12px 20px",
+          borderRadius: "8px",
+          fontSize: "16px",
+        }}
+      >
+        Press "E" to enter the building
+      </div>
     </>
   );
 };
