@@ -1,15 +1,17 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+
 interface AlleySceneProps {
   onEnterBuilding: () => void;
 }
-const AlleyScene: React.FC<AlleySceneProps> = ({
-  onEnterBuilding,
-}) => {
+
+const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [showEnterPrompt, setShowEnterPrompt] = useState(false);
+
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -36,7 +38,7 @@ const AlleyScene: React.FC<AlleySceneProps> = ({
 
     // Load Alley
     const gltfLoader = new GLTFLoader();
-    gltfLoader.load("/models/alley.glb", (gltf : any) => {
+    gltfLoader.load("/models/alley.glb", (gltf: any) => {
       scene.add(gltf.scene);
     });
 
@@ -46,10 +48,10 @@ const AlleyScene: React.FC<AlleySceneProps> = ({
     let isWalking = false;
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    // controls.enableDamping = true; // Optional: smooth motion
+
     // Load Human FBX
     const fbxLoader = new FBXLoader();
-    fbxLoader.load("/models/Walking.fbx", (object : any) => {
+    fbxLoader.load("/models/Walking.fbx", (object: any) => {
       human = object;
       human.scale.set(0.04, 0.04, 0.04);
       human.position.set(0, -12.8, 0);
@@ -58,23 +60,16 @@ const AlleyScene: React.FC<AlleySceneProps> = ({
       mixer = new THREE.AnimationMixer(human);
 
       if (object.animations && object.animations.length > 0) {
-        console.log("animation");
-        console.log(object.animations);
         walkAction = mixer.clipAction(object.animations[0]);
         walkAction.play();
-        walkAction.paused = false; // Start paused
+        walkAction.paused = false;
       } else {
         console.warn("No animations found in FBX file.");
       }
-
-      console.log("Mixer:", mixer);
-      console.log("Walk Action:", walkAction);
-      console.log("Animations:", object.animations);
     });
 
     const keys = { w: false, a: false, s: false, d: false, e: false };
-    const speed = 0.1; // Adjust as needed
-    // const clock = new THREE.Clock();
+    const speed = 0.1;
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key in keys) keys[e.key as keyof typeof keys] = true;
@@ -85,13 +80,10 @@ const AlleyScene: React.FC<AlleySceneProps> = ({
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
 
-    // const isAnyKeyPressed = () => keys.w || keys.a || keys.s || keys.d;
-
-    // Animation loop
     let prevTime = performance.now();
     const animate = () => {
       requestAnimationFrame(animate);
-      controls.update(); // Add this line
+      controls.update();
       const time = performance.now();
       const delta = (time - prevTime) / 1000;
       prevTime = time;
@@ -102,13 +94,13 @@ const AlleyScene: React.FC<AlleySceneProps> = ({
         let moved = false;
 
         if (keys.s) {
-          const direction = new THREE.Vector3(0, 0, -1); // Forward in local space
-          direction.applyQuaternion(human.quaternion);   // Rotate direction by human's rotation
+          const direction = new THREE.Vector3(0, 0, -1);
+          direction.applyQuaternion(human.quaternion);
           human.position.add(direction.multiplyScalar(speed));
           moved = true;
         }
         if (keys.w) {
-          const direction = new THREE.Vector3(0, 0, 1); // Backward in local space
+          const direction = new THREE.Vector3(0, 0, 1);
           direction.applyQuaternion(human.quaternion);
           human.position.add(direction.multiplyScalar(speed));
           moved = true;
@@ -116,24 +108,22 @@ const AlleyScene: React.FC<AlleySceneProps> = ({
         if (keys.a) {
           human.rotation.y += speed;
           moved = true;
-        // const direction = new THREE.Vector3(0, 0, -1); // Forward in local space
-        // direction.applyQuaternion(human.quaternion);   // Rotate direction by human's rotation
-
-        // console.log(direction.multiplyScalar(4))
-        }
-        if (keys.e) {
-          if(human.position.x < 5 && human.position.x > -5 && human.position.z > 25 && human.position.z < 30){
-            console.log("choesejinis idiot")
-            onEnterBuilding();
-          }
         }
         if (keys.d) {
           human.rotation.y -= speed;
           moved = true;
-        // const direction = new THREE.Vector3(0, 0, -1); // Forward in local space
-        // direction.applyQuaternion(human.quaternion);   // Rotate direction by human's rotation
+        }
 
-        // console.log(direction.multiplyScalar(4))
+        const inEnterZone =
+          human.position.x < 5 &&
+          human.position.x > -5 &&
+          human.position.z > 25 &&
+          human.position.z < 35;
+
+        setShowEnterPrompt(inEnterZone);
+
+        if (keys.e && inEnterZone) {
+          onEnterBuilding();
         }
 
         if (walkAction) {
@@ -142,28 +132,20 @@ const AlleyScene: React.FC<AlleySceneProps> = ({
             isWalking = true;
           } else if (!moved && isWalking) {
             walkAction.paused = true;
-            console.log("walking")
             isWalking = false;
           }
         }
 
-        const direction = new THREE.Vector3(0, 0, -1); // Forward in local space
-        direction.applyQuaternion(human.quaternion);   // Rotate direction by human's rotation
-
-        // console.log(direction.multiplyScalar(4))
         camera.position.x = human.position.x;
         camera.position.y = human.position.y + 12;
         camera.position.z = human.position.z - 20;
-        // (human.position.x, human.position.y + 12, human.position.z - 16);
-        // (human.position.x, human.position.y + 12, human.position.z - 16);
-        camera.lookAt(human.position)
+        camera.lookAt(human.position);
       }
 
       renderer.render(scene, camera);
     };
     animate();
 
-    // Resize
     const handleResize = () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -171,16 +153,50 @@ const AlleyScene: React.FC<AlleySceneProps> = ({
     };
     window.addEventListener("resize", handleResize);
 
-    // Cleanup
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       renderer.dispose();
     };
-  }, []);
+  }, [onEnterBuilding]);
 
-  return <canvas ref={canvasRef} className="webgl" />;
+  return (
+    <>
+      <canvas ref={canvasRef} className="webgl" />
+      <div
+        style={{
+          position: "absolute",
+          top: 20,
+          left: 20,
+          background: "rgba(0,0,0,0.6)",
+          color: "white",
+          padding: "10px 15px",
+          borderRadius: "8px",
+          fontSize: "14px",
+        }}
+      >
+        Move with: W A S D
+      </div>
+      {showEnterPrompt && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 50,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "rgba(0,0,0,0.7)",
+            color: "#fff",
+            padding: "12px 20px",
+            borderRadius: "8px",
+            fontSize: "16px",
+          }}
+        >
+          Press "E" to enter the building
+        </div>
+      )}
+    </>
+  );
 };
 
 export default AlleyScene;

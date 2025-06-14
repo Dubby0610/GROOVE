@@ -62,7 +62,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
       
       {/* Elevator panel */}
       <div className="absolute right-8 top-1/2 transform -translate-y-1/2 bg-black/90 rounded-lg p-6 border border-amber-600/30">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col gap-3">
           {[1, 2, 3, 4].map((floor) => (
             <button
               key={floor}
@@ -77,11 +77,12 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
               {floor}
             </button>
           ))}
+
           {/* Club floor button (B1) */}
           <button
             onClick={() => goToFloor(5)}
             disabled={isMoving || !showFloorButtons}
-            className={`col-span-3 h-10 rounded-full border text-sm font-medium transition-all duration-300 ${
+            className={`h-10 rounded-full border text-sm font-medium transition-all duration-300 ${
               currentFloor === 5
                 ? 'bg-purple-500 border-purple-400 text-white animate-pulse'
                 : 'bg-gray-800 border-purple-500/50 text-purple-400 hover:bg-purple-900/30'
@@ -91,7 +92,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
           </button>
         </div>
       </div>
-      
+
       {/* Elevator movement indicator */}
       {isMoving && (
         <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
