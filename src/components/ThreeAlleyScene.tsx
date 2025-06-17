@@ -39,8 +39,20 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
 
     // Load Alley
     const gltfLoader = new GLTFLoader();
+    let wallBoxes: THREE.Box3[] = [];
+
     gltfLoader.load("/models/alley.glb", (gltf: any) => {
       scene.add(gltf.scene);
+
+      // Find wall meshes and compute bounding boxes
+      gltf.scene.traverse((child: any) => {
+        if (child.isMesh && child.name.toLowerCase().includes("wall")) {
+          child.geometry.computeBoundingBox();
+          const box = child.geometry.boundingBox.clone();
+          box.applyMatrix4(child.matrixWorld);
+          wallBoxes.push(box);
+        }
+      });
     });
 
     let human: THREE.Object3D | null = null;
@@ -83,7 +95,6 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         human.position.z > 25 &&
         human.position.z < 35;
 
-
       if (e.key == 'e' && inEnterZone) {
         onEnterBuilding();
       }
@@ -103,7 +114,9 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
 
       if (human) {
         let moved = false;
+        const prevPosition = human.position.clone();
 
+        // Movement logic
         if (keys.s) {
           const direction = new THREE.Vector3(0, 0, -1);
           direction.applyQuaternion(human.quaternion);
@@ -125,6 +138,26 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
           moved = true;
         }
 
+        // Only check collision if moved
+        if (moved) {
+          // Compute human bounding box (must update every frame)
+          const humanBox = new THREE.Box3().setFromObject(human);
+
+          // Check collision with each wall
+          let collision = false;
+          for (const wallBox of wallBoxes) {
+            if (humanBox.intersectsBox(wallBox)) {
+              collision = true;
+              break;
+            }
+          }
+
+          // If collision, revert to previous position
+          if (collision) {
+            human.position.copy(prevPosition);
+          }
+        }
+
         // Enter zone logic
         const inEnterZone =
           human.position.x < 5 &&
@@ -136,11 +169,6 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         if (enterPromptRef.current) {
           enterPromptRef.current.style.display = inEnterZone ? "block" : "none";
         }
-
-        // if (keys.e && inEnterZone) {
-        //   console.log("go to elebrator!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        //   onEnterBuilding();
-        // }
 
         if (walkAction) {
           if (moved && !isWalking) {

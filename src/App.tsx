@@ -8,11 +8,12 @@ import { ElevatorScene } from './components/ElevatorScene';
 import { ClubDoorScene } from './components/ClubDoorScene';
 
 function App() {
-  const [gameState, setGameState] = useState<GameState>({
+  const [gameState, setGameState] = useState<GameState & { loadingMessage?: string }>( {
     currentScene: 'alley',
     isLoading: false,
     hasEnteredClub: false,
-    guestCount: 247
+    guestCount: 247,
+    loadingMessage: undefined
   });
 
   const [showEntryPrompt, setShowEntryPrompt] = useState(true);
@@ -24,15 +25,16 @@ function App() {
   };
 
   const changeScene = (newScene: Scene, loadingMessage?: string) => {
-    setGameState(prev => ({ ...prev, isLoading: true }));
-    
+    setGameState(prev => ({ ...prev, isLoading: true, loadingMessage }));
+
     setTimeout(() => {
-      setGameState(prev => ({ 
-        ...prev, 
-        currentScene: newScene, 
-        isLoading: false 
+      setGameState(prev => ({
+        ...prev,
+        currentScene: newScene,
+        isLoading: false,
+        loadingMessage: undefined
       }));
-      
+
       // Play appropriate audio for each scene
       if (newScene === 'elevator') {
         playElevatorSound();
@@ -130,7 +132,7 @@ function App() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {gameState.isLoading && <LoadingScreen />}
+      {gameState.isLoading && <LoadingScreen message={gameState.loadingMessage} />}
       
       <NavigationIndicator currentScene={gameState.currentScene} />
       
