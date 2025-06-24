@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import ThreeElevatorScene from './ThreeElevatorScene';
+import React, { useState, useRef } from 'react';
+import ThreeElevatorScene, { ThreeElevatorSceneHandle } from './ThreeElevatorScene';
 import { LoadingScreen } from './LoadingScreen';
 
 interface ElevatorSceneProps {
@@ -25,6 +25,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onEnterClub }) => 
   const [isMoving, setIsMoving] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [isElevatorLoading, setIsElevatorLoading] = useState(true);
+  const threeRef = useRef<ThreeElevatorSceneHandle>(null);
 
   const goToFloor = (floor: number) => {
     if (isMoving || floor === currentFloor) return;
@@ -35,6 +36,15 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onEnterClub }) => 
     }, 800);
   };
 
+  const handleClubClick = () => {
+    // Set a global callback for elevator animation end
+    (window as any).__onElevatorEnd = () => {
+      onEnterClub();
+    };
+    // Play elevator and human animation
+    threeRef.current?.playElevatorSequence();
+  };
+
   return (
     <div className="flex flex-col lg:flex-row w-full h-screen bg-black">
       {/* Loading screen */}
@@ -42,6 +52,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onEnterClub }) => 
       {/* Left: Elevator 3D + Floor Buttons */}
       <div className="relative w-full lg:w-2/5 h-96 lg:h-screen bg-black flex-1">
         <ThreeElevatorScene
+          ref={threeRef}
           floor={currentFloor}
           onLoaded={() => setIsElevatorLoading(false)}
         />
@@ -70,15 +81,14 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onEnterClub }) => 
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
         >
-          
           <img
             src={FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length]}
             alt={FLOOR_LABELS[(currentFloor - 1) % FLOOR_LABELS.length]}
             className="object-cover w-full h-full cursor-pointer transition-transform duration-300 group-hover:scale-105"
-            onClick={onEnterClub}
+            onClick={handleClubClick}
           />
           <button
-            onClick={onEnterClub}
+            onClick={handleClubClick}
             className={`absolute inset-0 flex items-center justify-center bg-black/60 text-white text-2xl font-bold transition-all duration-300
               ${hovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
             style={{ pointerEvents: hovered ? "auto" : "none" }}
