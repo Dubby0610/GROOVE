@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 interface AlleySceneProps {
@@ -12,6 +12,26 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const enterPromptRef = useRef<HTMLDivElement | null>(null);
   const movePromptRef = useRef<HTMLDivElement | null>(null);
+
+  // Define your wall boundaries (adjust these values to match your alley layout)
+  const WALLS = [
+    // Example: left wall at x = -10, right wall at x = 10, back wall at z = -20, front wall at z = 40
+    { axis: "x", min: -10, max: 16 }, // x boundaries (left/right)
+    { axis: "z", min: -41, max: 29 }, // z boundaries (front/back)
+  ];
+
+  const isInsideWalls = (pos: THREE.Vector3) => {
+    // Returns true if pos is inside all wall boundaries
+    for (const wall of WALLS) {
+      if (wall.axis === "x") {
+        if (pos.x < wall.min || pos.x > wall.max) return false;
+      }
+      if (wall.axis === "z") {
+        if (pos.z < wall.min || pos.z > wall.max) return false;
+      }
+    }
+    return true;
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -29,13 +49,62 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       0.1,
       1000
     );
-    camera.position.set(0, 2, 20);
+    camera.position.set(0, 3, 20);
+
+    let human: THREE.Object3D | null = null;
+    let mixer: THREE.AnimationMixer | null = null;
+    let walkAction: THREE.AnimationAction | null = null;
+    let standAction: THREE.AnimationAction | null = null; // <-- Add this
+    let isWalking = false;
+    let alleyLoaded = false;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+
+    const keys = { w: false, a: false, s: false, d: false, e: false };
+    const speed = 0.07;
+
+    const isAnyMoveKey = () => keys.w || keys.a || keys.s || keys.d;
 
     // Lighting
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);
     dirLight.position.set(5, 10, 7.5);
     scene.add(dirLight);
+
+    // Load Human GLB with Draco
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath("/draco/");
+    const humanLoader = new GLTFLoader();
+    humanLoader.setDRACOLoader(dracoLoader);
+
+    humanLoader.load("/models/human-draco.glb", (gltf: any) => {
+      human = gltf.scene;
+      human.scale.set(3, 3, 3);
+      human.position.set(0, -11.5, 0);
+      scene.add(human);
+
+      mixer = new THREE.AnimationMixer(human);
+
+      // Find "Walking" animation
+      const walkingClip = gltf.animations.find((clip) => clip.name === "Walking");
+      const standingClip = gltf.animations.find((clip) => clip.name === "Standing");
+
+      if (walkingClip) {
+        walkAction = mixer.clipAction(walkingClip);
+        walkAction.play();
+        walkAction.paused = true;
+      } else {
+        console.warn("No 'Walking' animation found in GLB file.");
+      }
+
+      if (standingClip) {
+        standAction = mixer.clipAction(standingClip);
+        standAction.play();
+        standAction.paused = false;
+      } else {
+        console.warn("No 'Standing' animation found in GLB file.");
+      }
+    });
 
     // Load Alley
     const gltfLoader = new GLTFLoader();
@@ -53,36 +122,15 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
           wallBoxes.push(box);
         }
       });
-    });
 
-    let human: THREE.Object3D | null = null;
-    let mixer: THREE.AnimationMixer | null = null;
-    let walkAction: THREE.AnimationAction | null = null;
-    let isWalking = false;
+      alleyLoaded = true; // <-- Set flag when alley is loaded
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-
-    // Load Human FBX
-    const fbxLoader = new FBXLoader();
-    fbxLoader.load("/models/Walking.fbx", (object: any) => {
-      human = object;
-      human.scale.set(0.04, 0.04, 0.04);
-      human.position.set(0, -12.8, 0);
-      scene.add(human);
-
-      mixer = new THREE.AnimationMixer(human);
-
-      if (object.animations && object.animations.length > 0) {
-        walkAction = mixer.clipAction(object.animations[0]);
-        walkAction.play();
-        walkAction.paused = false;
-      } else {
-        console.warn("No animations found in FBX file.");
+      // --- STOP WALKING when alley is loaded ---
+      if (walkAction) {
+        walkAction.paused = true;
+        isWalking = false;
       }
     });
-
-    const keys = { w: false, a: false, s: false, d: false, e: false };
-    const speed = 0.1;
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key in keys) keys[e.key as keyof typeof keys] = true;
@@ -90,10 +138,10 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key in keys) keys[e.key as keyof typeof keys] = false;
       const inEnterZone =
-        human.position.x < 5 &&
-        human.position.x > -5 &&
-        human.position.z > 25 &&
-        human.position.z < 35;
+        human && human.position.x < 5 &&
+        human.position.x > 0 &&
+        human.position.z > 27 &&
+        human.position.z < 29;
 
       if (e.key == 'e' && inEnterZone) {
         onEnterBuilding();
@@ -116,74 +164,68 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         let moved = false;
         const prevPosition = human.position.clone();
 
-        // Movement logic
-        if (keys.s) {
-          const direction = new THREE.Vector3(0, 0, -1);
-          direction.applyQuaternion(human.quaternion);
-          human.position.add(direction.multiplyScalar(speed));
-          moved = true;
-        }
-        if (keys.w) {
-          const direction = new THREE.Vector3(0, 0, 1);
-          direction.applyQuaternion(human.quaternion);
-          human.position.add(direction.multiplyScalar(speed));
-          moved = true;
-        }
-        if (keys.a) {
-          human.rotation.y += speed;
-          moved = true;
-        }
-        if (keys.d) {
-          human.rotation.y -= speed;
-          moved = true;
-        }
-
-        // Only check collision if moved
-        if (moved) {
-          // Compute human bounding box (must update every frame)
-          const humanBox = new THREE.Box3().setFromObject(human);
-
-          // Check collision with each wall
-          let collision = false;
-          for (const wallBox of wallBoxes) {
-            if (humanBox.intersectsBox(wallBox)) {
-              collision = true;
-              break;
-            }
+        // Only allow movement if alley is loaded and a movement key is pressed
+        let nextPosition = human.position.clone();
+        if (alleyLoaded && isAnyMoveKey()) {
+          if (keys.s) {
+            const direction = new THREE.Vector3(0, 0, -1);
+            direction.applyQuaternion(human.quaternion);
+            nextPosition.add(direction.multiplyScalar(speed));
+            moved = true;
           }
+          if (keys.w) {
+            const direction = new THREE.Vector3(0, 0, 1);
+            direction.applyQuaternion(human.quaternion);
+            nextPosition.add(direction.multiplyScalar(speed));
+            moved = true;
+          }
+          if (keys.a) {
+            human.rotation.y += speed;
+            moved = true;
+          }
+          if (keys.d) {
+            human.rotation.y -= speed;
+            moved = true;
+          }
+        }
 
-          // If collision, revert to previous position
-          if (collision) {
-            human.position.copy(prevPosition);
+        // Only update position if inside walls
+        if (moved && isInsideWalls(nextPosition)) {
+          human.position.copy(nextPosition);
+        }
+
+        // Animation control
+        if (walkAction && standAction) {
+          if (moved && !isWalking) {
+            walkAction.reset();
+            standAction.paused = true;
+            walkAction.paused = false;
+            isWalking = true;
+          } else if ((!moved || !isAnyMoveKey()) && isWalking) {
+            standAction.reset();
+            walkAction.paused = true;
+            standAction.paused = false;
+            // walkAction.time = 0; // <-- Snap to frame 0 (stand pose)
+            isWalking = false;
           }
         }
 
         // Enter zone logic
         const inEnterZone =
           human.position.x < 5 &&
-          human.position.x > -5 &&
-          human.position.z > 25 &&
-          human.position.z < 35;
+          human.position.x > 0 &&
+          human.position.z > 27 &&
+          human.position.z < 29;
 
         // Show/hide enter prompt
         if (enterPromptRef.current) {
           enterPromptRef.current.style.display = inEnterZone ? "block" : "none";
         }
 
-        if (walkAction) {
-          if (moved && !isWalking) {
-            walkAction.paused = false;
-            isWalking = true;
-          } else if (!moved && isWalking) {
-            walkAction.paused = true;
-            isWalking = false;
-          }
-        }
-
         camera.position.x = human.position.x;
         camera.position.y = human.position.y + 12;
         camera.position.z = human.position.z - 20;
-        camera.lookAt(human.position);
+        camera.lookAt(human.position.x, human.position.y + 5, human.position.z);
       }
 
       renderer.render(scene, camera);
