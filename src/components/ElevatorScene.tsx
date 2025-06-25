@@ -3,7 +3,7 @@ import ThreeElevatorScene, { ThreeElevatorSceneHandle } from './ThreeElevatorSce
 import { LoadingScreen } from './LoadingScreen';
 
 interface ElevatorSceneProps {
-  onEnterClub: () => void;
+  onReachClubFloor: (image: string) => void;
 }
 
 const FLOOR_IMAGES = [
@@ -20,11 +20,14 @@ const FLOOR_LABELS = [
   "4th floor - Late Night Agenda"
 ];
 
-export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onEnterClub }) => {
+const ELEVATOR_ANIMATION_DURATION = 8000;
+
+export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }) => {
   const [currentFloor, setCurrentFloor] = useState(1);
   const [isMoving, setIsMoving] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [isElevatorLoading, setIsElevatorLoading] = useState(true);
+  const [selectedClubImage, setSelectedClubImage] = useState<string | null>(null);
   const threeRef = useRef<ThreeElevatorSceneHandle>(null);
 
   const goToFloor = (floor: number) => {
@@ -37,12 +40,12 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onEnterClub }) => 
   };
 
   const handleClubClick = () => {
-    // Set a global callback for elevator animation end
-    (window as any).__onElevatorEnd = () => {
-      onEnterClub();
-    };
-    // Play elevator and human animation
+    const selectedImage = FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length];
+    setSelectedClubImage(selectedImage);
     threeRef.current?.playElevatorSequence();
+    setTimeout(() => {
+      onReachClubFloor(selectedImage); // Pass the image
+    }, ELEVATOR_ANIMATION_DURATION);
   };
 
   return (
@@ -82,7 +85,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onEnterClub }) => 
           onMouseLeave={() => setHovered(false)}
         >
           <img
-            src={FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length]}
+            src={selectedClubImage || FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length]}
             alt={FLOOR_LABELS[(currentFloor - 1) % FLOOR_LABELS.length]}
             className="object-cover w-full h-full cursor-pointer transition-transform duration-300 group-hover:scale-105"
             onClick={handleClubClick}

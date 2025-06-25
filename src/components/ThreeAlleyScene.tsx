@@ -83,6 +83,18 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       human.position.set(0, -11.5, 0);
       scene.add(human);
 
+      const humanClone = gltf.scene.clone(true);
+      scene.add(humanClone);
+
+      humanClone.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material.needsUpdate = true;
+          // Optionally:
+          // child.material.transparent = true;
+          // child.material.depthWrite = false;
+        }
+      });
+
       mixer = new THREE.AnimationMixer(human);
 
       // Find "Walking" animation
@@ -223,9 +235,9 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         }
 
         camera.position.x = human.position.x;
-        camera.position.y = human.position.y + 12;
+        camera.position.y = human.position.y + 13;
         camera.position.z = human.position.z - 20;
-        camera.lookAt(human.position.x, human.position.y + 5, human.position.z);
+        camera.lookAt(human.position.x, human.position.y + 4, human.position.z);
       }
 
       renderer.render(scene, camera);

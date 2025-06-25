@@ -71,6 +71,7 @@ function AppRoutes() {
   const { playDiscoTrack, playAmbientSounds, playElevatorSound, playDJVoiceOver } = useAudio();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState<string | undefined>(undefined);
+  const [clubImage, setClubImage] = useState<string | null>(null);
 
   // These handlers use navigate from react-router
   const navigate = useNavigate();
@@ -88,15 +89,14 @@ function AppRoutes() {
   };
 
   // Elevator → Club Door
-  const handleReachClubFloor = () => {
+  const handleReachClubFloor = (image: string) => {
+    setClubImage(image);
     setIsLoading(true);
-    setLoadingMessage('Arriving at the club...');
-    playDiscoTrack(true); // Muffled
+    setLoadingMessage("Arriving at the club...");
     setTimeout(() => {
       setIsLoading(false);
-      setLoadingMessage(undefined);
       navigate('/club-door');
-    }, 1500);
+    }, 1000); // Show loading for 1s
   };
 
   // Club Door → Club Success
@@ -133,6 +133,7 @@ function AppRoutes() {
           path="/club-door"
           element={
             <ClubDoorScene
+              clubImage={clubImage}
               onEnterClub={handleEnterClub}
               playDJVoiceOver={playDJVoiceOver}
             />

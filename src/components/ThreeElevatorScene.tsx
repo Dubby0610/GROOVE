@@ -13,9 +13,15 @@ export interface ThreeElevatorSceneHandle {
   playElevatorSequence: () => void;
 }
 
+let cachedElevator: THREE.Group | null = null;
+let cachedElevatorAnimations: THREE.AnimationClip[] = [];
+let cachedHuman: THREE.Group | null = null;
+let cachedHumanAnimations: THREE.AnimationClip[] = [];
+
 const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSceneProps>(
   ({ floor, onLoaded }, ref) => {
     const mountRef = useRef<HTMLDivElement>(null);
+    const elevatorMeshRef = useRef<THREE.Group | null>(null);
 
     // Animation refs
     const mixerRef = useRef<THREE.AnimationMixer | null>(null);
@@ -44,8 +50,9 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
       const height = mountRef.current.clientHeight;
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 500);
-      camera.position.set(0, 5, -4.5);
+      camera.position.set(0, 5.5, -4.5);
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio); // Add this line
       renderer.setSize(width, height);
       const clock = new THREE.Clock();
 
@@ -61,24 +68,29 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
       dracoLoader.setDecoderPath('/draco/');
       loader.setDRACOLoader(dracoLoader);
 
-      // Load elevator model and animation
-      loader.load("/models/elevator-draco.glb", (gltf: any) => {
-        gltf.scene.scale.set(2.5, 2.5, 2.5);
-        gltf.scene.position.set(0, -1.5, 0);
-        scene.add(gltf.scene);
-
-        // Elevator animation
-        if (gltf.animations && gltf.animations.length > 0) {
-          elevatorMixerRef.current = new THREE.AnimationMixer(gltf.scene);
-          elevatorActionRef.current = elevatorMixerRef.current.clipAction(gltf.animations[0]);
-          elevatorActionRef.current.clampWhenFinished = true;
-          elevatorActionRef.current.loop = THREE.LoopOnce;
-          // Pause by default
-          elevatorActionRef.current.paused = true;
-        }
-
+      // Elevator
+      const addElevator = (sceneObj: THREE.Group, anims: THREE.AnimationClip[]) => {
+        const clone = sceneObj.clone(true);
+        clone.scale.set(2.5, 2.5, 2.5);
+        clone.position.set(0, -1.5, 0);
+        scene.add(clone);
+        elevatorMixerRef.current = new THREE.AnimationMixer(clone);
+        elevatorActionRef.current = elevatorMixerRef.current.clipAction(anims[0]);
+        elevatorActionRef.current.clampWhenFinished = true;
+        elevatorActionRef.current.loop = THREE.LoopOnce;
+        elevatorActionRef.current.paused = true;
         if (onLoaded) onLoaded();
-      });
+      };
+
+      if (cachedElevator) {
+        addElevator(cachedElevator, cachedElevatorAnimations);
+      } else {
+        loader.load("/models/elevator-draco.glb", (gltf: any) => {
+          cachedElevator = gltf.scene;
+          cachedElevatorAnimations = gltf.animations;
+          addElevator(gltf.scene, gltf.animations);
+        });
+      }
 
       // Load human model and animations
       loader.load("/models/human-draco.glb", (gltf: any) => {
@@ -103,6 +115,7 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
           listeningActionRef.current.loop = THREE.LoopOnce;
           listeningActionRef.current.clampWhenFinished = true;
           listeningActionRef.current.paused = true;
+          listeningActionRef.current.timeScale = 0.5; // Slow down to half speed
         }
 
         if (onLoaded) onLoaded();
@@ -136,17 +149,13 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
         if (mixerRef.current) mixerRef.current.update(delta);
         if (elevatorMixerRef.current) elevatorMixerRef.current.update(delta);
 
-        // Detect elevator animation end
-        if (
-          elevatorActionRef.current &&
-          elevatorActionRef.current.isRunning() &&
-          elevatorActionRef.current.time >= elevatorActionRef.current.getClip().duration
-        ) {
-          // Animation finished, call callback if provided
-          if (typeof (window as any).__onElevatorEnd === "function") {
-            (window as any).__onElevatorEnd();
-            (window as any).__onElevatorEnd = null;
-          }
+        // Elevator movement visualization
+        if (elevatorActionRef.current && elevatorMeshRef.current) {
+          const action = elevatorActionRef.current;
+          const duration = action.getClip().duration;
+          const progress = Math.min(action.time / duration, 1); // 0 to 1
+          // Move elevator up by 3 units over the animation
+          elevatorMeshRef.current.position.y = -1.5 + progress * 3;
         }
 
         renderer.render(scene, camera);
@@ -157,7 +166,17 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
         renderer.dispose();
         controls.dispose();
         window.removeEventListener("resize", handleResize);
-        dracoLoader.dispose(); // Dispose here, after all loads
+        dracoLoader.dispose();
+
+        // Dispose geometries, materials, and textures
+        scene.traverse((obj: any) => {
+          if (obj.geometry) obj.geometry.dispose?.();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose?.());
+            else obj.material.dispose?.();
+          }
+          if (obj.texture) obj.texture.dispose?.();
+        });
       };
     }, []); // Only run once
 

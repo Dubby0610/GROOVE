@@ -4,9 +4,10 @@ import { InteractiveHotspot } from './InteractiveHotspot';
 interface ClubDoorSceneProps {
   onEnterClub: () => void;
   playDJVoiceOver: () => void;
+  clubImage: string | null;
 }
 
-export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({ onEnterClub, playDJVoiceOver }) => {
+export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({ clubImage, onEnterClub, playDJVoiceOver }) => {
   const [pulseIntensity, setPulseIntensity] = useState(0.5);
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
 
@@ -34,7 +35,15 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({ onEnterClub, playD
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black">
+    <div
+      className="relative w-full h-screen overflow-hidden"
+      style={{
+        backgroundImage: clubImage ? `url(${clubImage})` : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
       {/* Hallway atmosphere */}
       <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-black" />
       
