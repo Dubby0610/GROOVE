@@ -7,6 +7,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 interface ThreeElevatorSceneProps {
   floor: number;
   onLoaded?: () => void;
+  onElevatorSequenceEnd?: () => void; // Add this line
 }
 
 export interface ThreeElevatorSceneHandle {
@@ -19,7 +20,7 @@ let cachedHuman: THREE.Group | null = null;
 let cachedHumanAnimations: THREE.AnimationClip[] = [];
 
 const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSceneProps>(
-  ({ floor, onLoaded }, ref) => {
+  ({ floor, onLoaded, onElevatorSequenceEnd }, ref) => {
     const mountRef = useRef<HTMLDivElement>(null);
     const elevatorMeshRef = useRef<THREE.Group | null>(null);
 
@@ -29,6 +30,7 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
     const elevatorMixerRef = useRef<THREE.AnimationMixer | null>(null);
     const elevatorActionRef = useRef<THREE.AnimationAction | null>(null);
     const listeningActionRef = useRef<THREE.AnimationAction | null>(null);
+    const humanActionsRef = useRef<{ [key: string]: THREE.AnimationAction }>({});
 
     useImperativeHandle(ref, () => ({
       playElevatorSequence: () => {
@@ -79,6 +81,7 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
         elevatorActionRef.current.clampWhenFinished = true;
         elevatorActionRef.current.loop = THREE.LoopOnce;
         elevatorActionRef.current.paused = true;
+
         if (onLoaded) onLoaded();
       };
 
@@ -101,26 +104,44 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
         humanRef.current = gltf.scene;
         mixerRef.current = new THREE.AnimationMixer(gltf.scene);
 
-        // Find "Standing" and "Listeningmusic" animations
-        const standingClip = gltf.animations.find((clip) => clip.name === "Standing");
-        const listeningClip = gltf.animations.find((clip) => clip.name === "Listeningmusic");
+        // Setup all actions, paused by default
+        gltf.animations.forEach((clip: THREE.AnimationClip) => {
+          const action = mixerRef.current!.clipAction(clip);
+          action.paused = true;
+          humanActionsRef.current[clip.name] = action;
+        });
 
-        if (standingClip) {
-          const standAction = mixerRef.current.clipAction(standingClip);
-          standAction.play();
-          standAction.paused = false;
+        // Helper to play only one animation at a time
+        function playOnly(actionName: string) {
+          Object.entries(humanActionsRef.current).forEach(([name, action]) => {
+            if (name === actionName) {
+              action.reset();
+              action.paused = false;
+              action.play();
+            } else {
+              action.stop();
+              action.paused = true;
+            }
+          });
         }
-        if (listeningClip) {
-          listeningActionRef.current = mixerRef.current.clipAction(listeningClip);
+
+        // Start with Standing
+        playOnly("Standing");
+
+        // Save playOnly to ref if you want to trigger from outside
+        (humanRef.current as any).playOnly = playOnly;
+
+        // Setup listeningActionRef for external trigger
+        if (humanActionsRef.current["Listeningmusic"]) {
+          listeningActionRef.current = humanActionsRef.current["Listeningmusic"];
           listeningActionRef.current.loop = THREE.LoopOnce;
           listeningActionRef.current.clampWhenFinished = true;
-          listeningActionRef.current.paused = true;
-          listeningActionRef.current.timeScale = 0.5; // Slow down to half speed
+          listeningActionRef.current.timeScale = 0.5;
         }
 
         if (onLoaded) onLoaded();
       });
-
+      
       // Controls
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enablePan = false;
@@ -146,8 +167,9 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
       const animate = () => {
         requestAnimationFrame(animate);
         const delta = clock.getDelta();
-        if (mixerRef.current) mixerRef.current.update(delta);
-        if (elevatorMixerRef.current) elevatorMixerRef.current.update(delta);
+        const slowFactor = 1; // 0.5 = half speed
+        if (mixerRef.current) mixerRef.current.update(delta * slowFactor);
+        if (elevatorMixerRef.current) elevatorMixerRef.current.update(delta * slowFactor);
 
         // Elevator movement visualization
         if (elevatorActionRef.current && elevatorMeshRef.current) {
@@ -161,6 +183,30 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
         renderer.render(scene, camera);
       };
       animate();
+
+      // 1. Play elevator animation and listen for its end
+      if (elevatorActionRef.current) {
+        elevatorActionRef.current.reset();
+        elevatorActionRef.current.play();
+
+        // Listen for elevator animation end
+        elevatorActionRef.current.getMixer().addEventListener('finished', () => {
+          // Play "Startwalking" animation on human
+          playOnly("Startwalking");
+        });
+      }
+
+      // 2. Listen for human "Startwalking" animation end
+      if (mixerRef.current) {
+        mixerRef.current.addEventListener('finished', (e) => {
+          if (e.action && e.action.getClip().name === "Startwalking") {
+            // Go to next scene
+            if (typeof onElevatorSequenceEnd === "function") {
+              onElevatorSequenceEnd();
+            }
+          }
+        });
+      }
 
       return () => {
         renderer.dispose();

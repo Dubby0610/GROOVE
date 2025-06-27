@@ -49,7 +49,7 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       0.1,
       1000
     );
-    camera.position.set(0, 3, 20);
+    camera.position.set(0, 3, 15);
 
     let human: THREE.Object3D | null = null;
     let mixer: THREE.AnimationMixer | null = null;
@@ -61,7 +61,7 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
     const controls = new OrbitControls(camera, renderer.domElement);
 
     const keys = { w: false, a: false, s: false, d: false, e: false };
-    const speed = 0.07;
+    const speed = 0.1;
 
     const isAnyMoveKey = () => keys.w || keys.a || keys.s || keys.d;
 
@@ -77,46 +77,54 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
     const humanLoader = new GLTFLoader();
     humanLoader.setDRACOLoader(dracoLoader);
 
+    let actions: { [key: string]: THREE.AnimationAction } = {};
+
     humanLoader.load("/models/human-draco.glb", (gltf: any) => {
       human = gltf.scene;
       human.scale.set(3, 3, 3);
       human.position.set(0, -11.5, 0);
       scene.add(human);
 
-      const humanClone = gltf.scene.clone(true);
-      scene.add(humanClone);
-
-      humanClone.traverse((child) => {
-        if (child.isMesh && child.material) {
-          child.material.needsUpdate = true;
-          // Optionally:
-          // child.material.transparent = true;
-          // child.material.depthWrite = false;
+      // Fix materials (for hair, transparency, etc.)
+      human.traverse((child) => {
+        if ((child as any).isMesh && (child as any).material) {
+          const mat = (child as any).material;
+          mat.needsUpdate = true;
+          if (mat.transparent) {
+            mat.depthWrite = false;
+          }
+          if (mat.map) {
+            mat.map.encoding = THREE.sRGBEncoding;
+            mat.map.needsUpdate = true;
+          }
         }
       });
 
       mixer = new THREE.AnimationMixer(human);
 
-      // Find "Walking" animation
-      const walkingClip = gltf.animations.find((clip) => clip.name === "Walking");
-      const standingClip = gltf.animations.find((clip) => clip.name === "Standing");
+      // Setup all actions, paused by default
+      gltf.animations.forEach((clip: THREE.AnimationClip) => {
+        actions[clip.name] = mixer!.clipAction(clip);
+        actions[clip.name].paused = true;
+      });
 
-      if (walkingClip) {
-        walkAction = mixer.clipAction(walkingClip);
-        walkAction.play();
-        walkAction.paused = true;
-      } else {
-        console.warn("No 'Walking' animation found in GLB file.");
-      }
-
-      if (standingClip) {
-        standAction = mixer.clipAction(standingClip);
-        standAction.play();
-        standAction.paused = false;
-      } else {
-        console.warn("No 'Standing' animation found in GLB file.");
-      }
+      // Start with Standing
+      playOnly("Standing");
     });
+
+    // Animation switching helper
+    function playOnly(actionName: string) {
+      Object.entries(actions).forEach(([name, action]) => {
+        if (name === actionName) {
+          action.enabled = true;
+          action.fadeIn(0.2); // Smoothly fade in
+          action.reset();
+          action.play();
+        } else {
+          action.fadeOut(0.2); // Smoothly fade out others
+        }
+      });
+    }
 
     // Load Alley
     const gltfLoader = new GLTFLoader();
@@ -207,17 +215,12 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         }
 
         // Animation control
-        if (walkAction && standAction) {
+        if (actions["Walking"] && actions["Standing"]) {
           if (moved && !isWalking) {
-            walkAction.reset();
-            standAction.paused = true;
-            walkAction.paused = false;
+            playOnly("Walking");
             isWalking = true;
           } else if ((!moved || !isAnyMoveKey()) && isWalking) {
-            standAction.reset();
-            walkAction.paused = true;
-            standAction.paused = false;
-            // walkAction.time = 0; // <-- Snap to frame 0 (stand pose)
+            playOnly("Standing");
             isWalking = false;
           }
         }
@@ -235,9 +238,9 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         }
 
         camera.position.x = human.position.x;
-        camera.position.y = human.position.y + 13;
+        camera.position.y = human.position.y + 21;
         camera.position.z = human.position.z - 20;
-        camera.lookAt(human.position.x, human.position.y + 4, human.position.z);
+        camera.lookAt(human.position.x, human.position.y-1, human.position.z);
       }
 
       renderer.render(scene, camera);
