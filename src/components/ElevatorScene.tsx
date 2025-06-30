@@ -3,14 +3,14 @@ import ThreeElevatorScene, { ThreeElevatorSceneHandle } from './ThreeElevatorSce
 import { LoadingScreen } from './LoadingScreen';
 
 interface ElevatorSceneProps {
-  onReachClubFloor: (image: string) => void;
+  onReachClubFloor: (floor: number) => void;
 }
 
 const FLOOR_IMAGES = [
-  "/imgs/1st floor - Party Vibes - 1.png",
-  "/imgs/2nd floor - Boogie Wonderland.png",
-  "/imgs/3rd floor - For The Sexy People.png",
-  "/imgs/4th floor - Late Night Agenda.png"
+  "/imgs/1st.png",
+  "/imgs/2nd.png",
+  "/imgs/3rd.png",
+  "/imgs/4th.png"
 ];
 
 const FLOOR_LABELS = [
@@ -40,11 +40,10 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
   };
 
   const handleClubClick = () => {
-    const selectedImage = FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length];
-    setSelectedClubImage(selectedImage);
+    setSelectedClubImage(FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length]);
     threeRef.current?.playElevatorSequence();
     setTimeout(() => {
-      onReachClubFloor(selectedImage); // Pass the image
+      onReachClubFloor(currentFloor);
     }, ELEVATOR_ANIMATION_DURATION);
   };
 
@@ -92,12 +91,15 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
           />
           <button
             onClick={handleClubClick}
-            className={`absolute inset-0 flex items-center justify-center bg-black/60 text-white text-2xl font-bold transition-all duration-300
+            className={`absolute inset-0 flex items-center justify-center bg-black/60 text-white text-5xl font-bold transition-all duration-300
               ${hovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
             style={{ pointerEvents: hovered ? "auto" : "none" }}
           >
             Go!
           </button>
+        </div>
+        <div className="text-lg text-white mb-2 text-center">
+          Click image to Go
         </div>
         <div className="text-xl lg:text-2xl text-amber-400 font-bold mb-4 text-center">
           {FLOOR_LABELS[(currentFloor - 1) % FLOOR_LABELS.length]}
