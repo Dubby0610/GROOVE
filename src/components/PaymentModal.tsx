@@ -1,13 +1,22 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
+import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { apiFetch } from "../utils/apiFetch";
 
 interface PaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  subscription?: {
+    start_date?: string;
+    end_date?: string;
+    plan?: string;
+    status?: string;
+  } | null;
 }
 
 const plans = [
   {
     id: "daily",
+    price_id: "price_1RggptLJMvQ3XoVWzDBZnVmt",
     name: "Daily Pass",
     desc: "One night access",
     price: "$1.99",
@@ -15,6 +24,7 @@ const plans = [
   },
   {
     id: "monthly",
+    price_id: "price_1RggqfLJMvQ3XoVWB88NEbSu",
     name: "VIP Monthly",
     desc: "Unlimited access + perks",
     price: "$29.99",
@@ -22,57 +32,119 @@ const plans = [
   },
 ];
 
-export default function PaymentModal({ open, onOpenChange }: PaymentModalProps) {
-  const [selectedPlan, setSelectedPlan] = useState("daily");
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
-  const [username, setUsername] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
+type NotificationType = 'success' | 'error' | null;
+
+export default function PaymentModal({
+  open,
+  onOpenChange,
+  subscription,
+}: PaymentModalProps) {
+  const [selectedPlan, setSelectedPlan] = useState(
+    "price_1RggptLJMvQ3XoVWzDBZnVmt"
+  );
+  // const [paymentMethod, setPaymentMethod] = useState<"card">("card");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showPayPalLoading, setShowPayPalLoading] = useState(false);
+  // const [showPayPalLoading, setShowPayPalLoading] = useState(false);
+  const [cardComplete, setCardComplete] = useState(false);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: NotificationType } | null>(null);
+
+  const stripe = useStripe();
+  const elements = useElements();
+
+  // Simulate Credit Card payment
+  const handleCreditCardPayment = async () => {
+    setIsProcessing(true);
+    if (!stripe || !elements) return;
+
+    const cardElement = elements.getElement(CardElement);
+    const { error, paymentMethod } = await stripe.createPaymentMethod({
+      type: "card",
+      card: cardElement!,
+      billing_details: { email: user?.email },
+    });
+
+    if (error) {
+      setNotification({ message: error.message, type: 'error' });
+      setIsProcessing(false);
+      return;
+    }
+    console.log(paymentMethod);
+
+    // Send paymentMethod.id to backend
+    const res = await apiFetch(`/payment/subscribe`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+      body: JSON.stringify({
+        user,
+        plan: selectedPlan,
+        paymentMethodId: paymentMethod.id,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setNotification({ message: "Subscription successful!", type: 'success' });
+      onOpenChange(false);
+    } else {
+      setNotification({ message: data.error || "Payment failed", type: 'error' });
+    }
+    setIsProcessing(false);
+  };
+
+  const payAmount =
+    plans.find((plan) => plan.price_id === selectedPlan)?.price || "$0.00";
+  useEffect(() => {
+    if (open) {
+      console.log(open);
+      const user_email = localStorage.getItem("email");
+      const user_id = localStorage.getItem("id");
+      if (user_id && user_email) {
+        try {
+          setUser({ id: user_id, email: user_email });
+        } catch {
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+    }
+  }, [open]);
 
   if (!open) return null;
 
-  // Format card number as 1234 5678 9012 3456
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    value = value.slice(0, 16);
-    let formatted = "";
-    for (let i = 0; i < value.length; i += 4) {
-      if (i > 0) formatted += " ";
-      formatted += value.substr(i, 4);
-    }
-    setCardNumber(formatted);
-  };
-
-  // Simulate PayPal payment
-  const handlePayPalPayment = () => {
-    setShowPayPalLoading(true);
-    setIsProcessing(true);
-    setTimeout(() => {
-      setShowPayPalLoading(false);
-      setIsProcessing(false);
-      // Simulate redirect to PayPal
-      window.open("https://www.sandbox.paypal.com/signin", "_blank");
-      onOpenChange(false);
-    }, 1800);
-  };
-
-  // Simulate Credit Card payment
-  const handleCreditCardPayment = () => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      alert("Payment processed!");
-      onOpenChange(false);
-    }, 1500);
-  };
-
-  const payAmount = selectedPlan === "daily" ? "$1.99" : "$29.99";
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+      {/* Notification Bar */}
+      {notification && (
+        <div
+          className={`fixed top-8 left-1/2 transform -translate-x-1/2 px-8 py-3 rounded-xl shadow-xl z-50 text-center text-lg font-bold animate-fade-in
+            ${notification.type === 'success'
+              ? 'bg-gradient-to-r from-green-400 to-cyan-400 text-black border-2 border-green-300'
+              : 'bg-gradient-to-r from-pink-500 to-red-500 text-white border-2 border-pink-300'}
+          `}
+          style={{
+            boxShadow: notification.type === 'success'
+              ? '0 0 24px 4px #2af59899'
+              : '0 0 24px 4px #f759a299',
+            letterSpacing: '0.04em',
+            textShadow: notification.type === 'success'
+              ? '0 0 8px #2af598, 0 0 2px #fff'
+              : '0 0 8px #f759a2, 0 0 2px #fff',
+          }}
+        >
+          {String(notification?.message ?? '')}
+          <button
+            className="ml-4 text-xl font-bold hover:text-black/60 hover:text-white/60"
+            onClick={() => setNotification(null)}
+            aria-label="Close notification"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div className="bg-[#181c2b] rounded-2xl shadow-2xl max-w-3xl w-full flex flex-col md:flex-row overflow-hidden border border-[#23263a] relative">
         {/* Close Button */}
         <button
@@ -89,68 +161,70 @@ export default function PaymentModal({ open, onOpenChange }: PaymentModalProps) 
             <h2 className="text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
               Join the VIP Experience
             </h2>
-            <p className="text-gray-400 text-sm mt-1">
-              Enter your details and choose your access level
-            </p>
           </div>
 
-          {/* Username */}
-          <div className="mb-6">
-            <label className="block text-white font-medium mb-2" htmlFor="username">
-              Username
-            </label>
-            <input
-              id="username"
-              className="w-full h-12 px-4 rounded-lg bg-[#23263a] border border-[#35395a] text-white placeholder-gray-500 focus:border-pink-400 outline-none transition"
-              placeholder="Enter your username"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-            />
-          </div>
+          {/* User & Subscription Info */}
+          {(user || subscription) && (
+            <div className="mb-6 p-4 rounded-lg bg-[#23263a] border border-[#35395a] text-white">
+              {user && (
+                <div className="mb-1">
+                  <span className="font-semibold">Email:</span> {user.email}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Plan Selection */}
           <div>
-            <label className="block text-white font-medium mb-2">Choose Your Access</label>
+            <label className="block text-white font-medium mb-2">
+              Choose Your Access
+            </label>
             <div className="space-y-4">
-              {plans.map(plan => (
+              {plans.map((plan) => (
                 <div
                   key={plan.id}
                   className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all
                     ${
-                      selectedPlan === plan.id
+                      selectedPlan === plan.price_id
                         ? plan.color === "pink"
                           ? "border-pink-400 bg-pink-400/10"
                           : "border-purple-400 bg-purple-400/10"
                         : "border-[#35395a] hover:border-pink-400"
                     }`}
-                  onClick={() => setSelectedPlan(plan.id)}
+                  onClick={() => setSelectedPlan(plan.price_id)}
                 >
                   <div className="flex items-center">
                     <span
                       className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                        selectedPlan === plan.id
+                        selectedPlan === plan.price_id
                           ? plan.color === "pink"
                             ? "border-pink-400"
                             : "border-purple-400"
                           : "border-gray-500"
                       }`}
                     >
-                      {selectedPlan === plan.id && (
+                      {selectedPlan === plan.price_id && (
                         <span
                           className={`w-3 h-3 rounded-full ${
-                            plan.color === "pink" ? "bg-pink-400" : "bg-purple-400"
+                            plan.color === "pink"
+                              ? "bg-pink-400"
+                              : "bg-purple-400"
                           }`}
                         />
                       )}
                     </span>
                     <div>
-                      <div className="font-semibold text-white">{plan.name}</div>
+                      <div className="font-semibold text-white">
+                        {plan.name}
+                      </div>
                       <div className="text-sm text-gray-400">{plan.desc}</div>
                     </div>
                   </div>
                   <div
                     className={`font-bold text-xl ${
-                      plan.color === "pink" ? "text-pink-400" : "text-purple-400"
+                      plan.color === "pink"
+                        ? "text-pink-400"
+                        : "text-purple-400"
                     }`}
                   >
                     {plan.price}
@@ -163,148 +237,64 @@ export default function PaymentModal({ open, onOpenChange }: PaymentModalProps) 
 
         {/* Right */}
         <div className="flex-1 p-8 bg-[#23263a] border-l border-[#23263a] min-w-[340px] flex flex-col">
-          {/* Payment Method */}
-          <div className="mb-6">
-            <label className="block text-white font-medium mb-2">Payment Method</label>
-            <div className="space-y-3">
-              <div
-                className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                  paymentMethod === "card"
-                    ? "border-blue-400 bg-blue-400/10"
-                    : "border-[#35395a] hover:border-blue-400"
-                }`}
-                onClick={() => setPaymentMethod("card")}
-              >
-                <span
-                  className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                    paymentMethod === "card" ? "border-blue-400" : "border-gray-500"
-                  }`}
-                >
-                  {paymentMethod === "card" && (
-                    <span className="w-3 h-3 rounded-full bg-blue-400" />
-                  )}
-                </span>
-                <span className="text-white font-medium">Credit Card</span>
+          {/* Credit Card Styled Input */}
+          <div className="mb-6 flex flex-col items-center">
+            <label className="block text-white font-medium mb-4 text-lg tracking-wide">
+              Card Information
+            </label>
+            <div
+              className="relative w-full max-w-xs bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 rounded-2xl shadow-2xl p-6 border-4 border-blue-400 flex flex-col items-start"
+              style={{ minHeight: '180px', minWidth: '320px', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)' }}
+            >
+              <div className="absolute top-4 right-6 text-white/60 text-xs font-mono tracking-widest select-none">
+                VISA / MC / AMEX
               </div>
-              <div
-                className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                  paymentMethod === "paypal"
-                    ? "border-yellow-400 bg-yellow-400/10"
-                    : "border-[#35395a] hover:border-yellow-400"
-                }`}
-                onClick={() => setPaymentMethod("paypal")}
-              >
-                <span
-                  className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                    paymentMethod === "paypal" ? "border-yellow-400" : "border-gray-500"
-                  }`}
-                >
-                  {paymentMethod === "paypal" && (
-                    <span className="w-3 h-3 rounded-full bg-yellow-400" />
-                  )}
-                </span>
-                <span className="h-6 w-6 bg-yellow-400 rounded flex items-center justify-center mr-2">
-                  <span className="text-sm font-bold text-black">P</span>
-                </span>
-                <span className="text-white font-medium">PayPal</span>
+              <div className="mb-4 mt-2 text-white text-base font-semibold tracking-wider select-none">
+                GROOVE CLUB
+              </div>
+              <div className="w-full">
+                <CardElement
+                  options={{
+                    hidePostalCode: true,
+                    style: {
+                      base: {
+                        color: '#fff',
+                        fontSize: '18px',
+                        letterSpacing: '2px',
+                        '::placeholder': { color: '#a0aec0' },
+                        backgroundColor: 'transparent',
+                        fontFamily: 'monospace',
+                        padding: '12px 0',
+                      },
+                      invalid: { color: '#fa755a' },
+                    },
+                  }}
+                  onChange={(e: any) => {
+                    setCardComplete(e.complete);
+                  }}
+                />
+              </div>
+              <div className="absolute bottom-4 left-6 text-xs text-white/60 font-mono select-none">
+                Secure • Stripe
+              </div>
+              <div className="absolute bottom-4 right-6 w-10 h-6 bg-gradient-to-r from-yellow-400 to-yellow-200 rounded-sm shadow-inner flex items-center justify-center">
+                <span className="text-xs font-bold text-gray-900">💳</span>
               </div>
             </div>
           </div>
-
-          {/* Card Details */}
-          {paymentMethod === "card" && (
-            <div className="mb-6 bg-[#23263a] rounded-xl border border-[#35395a] p-6">
-              <div className="font-medium text-white mb-4">Card Details</div>
-              <div className="mb-4">
-                <label className="block text-gray-300 mb-1" htmlFor="cardNumber">
-                  Card Number
-                </label>
-                <input
-                  id="cardNumber"
-                  className="w-full h-12 px-4 rounded-lg bg-[#23263a] border border-[#35395a] text-white placeholder-gray-400 focus:border-blue-400 outline-none font-mono"
-                  placeholder="1234 5678 9012 3456"
-                  value={cardNumber}
-                  onChange={handleCardNumberChange}
-                  maxLength={19}
-                  inputMode="numeric"
-                  autoComplete="cc-number"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-300 mb-1" htmlFor="expiry">
-                    Expiry Date
-                  </label>
-                  <input
-                    id="expiry"
-                    className="w-full h-12 px-4 rounded-lg bg-[#23263a] border border-[#35395a] text-white placeholder-gray-400 focus:border-blue-400 outline-none font-mono"
-                    placeholder="MM/YY"
-                    value={expiry}
-                    onChange={e => setExpiry(e.target.value)}
-                    maxLength={5}
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-300 mb-1" htmlFor="cvv">
-                    CVV
-                  </label>
-                  <input
-                    id="cvv"
-                    className="w-full h-12 px-4 rounded-lg bg-[#23263a] border border-[#35395a] text-white placeholder-gray-400 focus:border-blue-400 outline-none font-mono"
-                    placeholder="123"
-                    value={cvv}
-                    onChange={e => setCvv(e.target.value)}
-                    maxLength={3}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* PayPal Details */}
-          {paymentMethod === "paypal" && (
-            <div className="mb-6 bg-[#23263a] rounded-xl border border-[#35395a] p-6 flex flex-col items-center transition-transform duration-200 hover:scale-105 hover:shadow-2xl">
-              <button
-                className="flex flex-col items-center w-full focus:outline-none"
-                onClick={handlePayPalPayment}
-                disabled={isProcessing || showPayPalLoading}
-                type="button"
-              >
-                <div className="h-16 w-16 bg-yellow-400 rounded-full flex items-center justify-center mb-4 transition-transform duration-200 hover:scale-110 hover:shadow-lg">
-                  <span className="text-2xl font-bold text-black">P</span>
-                </div>
-                <div className="text-white font-semibold text-lg mb-1">Pay with PayPal</div>
-                <div className="text-gray-400 text-center text-sm">
-                  You'll be redirected to PayPal to complete your payment
-                </div>
-                {showPayPalLoading && (
-                  <div className="mt-4 flex items-center space-x-2">
-                    <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-yellow-400"></span>
-                    <span className="text-yellow-400">Connecting...</span>
-                  </div>
-                )}
-              </button>
-            </div>
-          )}
 
           {/* Pay Button */}
           <button
             className={`w-full rounded-lg py-4 mt-2 text-lg font-semibold shadow-lg transition-all duration-300
               ${
-                !username || isProcessing
+                !user?.email || isProcessing || !cardComplete
                   ? "bg-gradient-to-r from-pink-900 to-purple-900 text-gray-400 cursor-not-allowed"
                   : "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white"
               }`}
-            disabled={!username || isProcessing}
-            onClick={() => {
-              if (paymentMethod === "paypal") {
-                handlePayPalPayment();
-              } else {
-                handleCreditCardPayment();
-              }
-            }}
+            disabled={isProcessing || !cardComplete}
+            onClick={handleCreditCardPayment}
           >
-            {isProcessing || showPayPalLoading ? (
+            {!user?.email || isProcessing ? (
               <span className="flex items-center justify-center space-x-2">
                 <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
                 <span>Processing...</span>

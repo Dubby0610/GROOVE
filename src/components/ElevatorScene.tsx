@@ -1,6 +1,8 @@
-import React, { useState, useRef } from 'react';
-import ThreeElevatorScene, { ThreeElevatorSceneHandle } from './ThreeElevatorScene';
-import { LoadingScreen } from './LoadingScreen';
+import React, { useState, useRef } from "react";
+import ThreeElevatorScene, {
+  ThreeElevatorSceneHandle,
+} from "./ThreeElevatorScene";
+import { LoadingScreen } from "./LoadingScreen";
 
 interface ElevatorSceneProps {
   onReachClubFloor: (floor: number) => void;
@@ -10,24 +12,28 @@ const FLOOR_IMAGES = [
   "/imgs/1st.png",
   "/imgs/2nd.png",
   "/imgs/3rd.png",
-  "/imgs/4th.png"
+  "/imgs/4th.png",
 ];
 
 const FLOOR_LABELS = [
   "1st floor - Party Vibes",
   "2nd floor - Boogie Wonderland",
   "3rd floor - For The Sexy People",
-  "4th floor - Late Night Agenda"
+  "4th floor - Late Night Agenda",
 ];
 
 const ELEVATOR_ANIMATION_DURATION = 8000;
 
-export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }) => {
+export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
+  onReachClubFloor,
+}) => {
   const [currentFloor, setCurrentFloor] = useState(1);
   const [isMoving, setIsMoving] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [isElevatorLoading, setIsElevatorLoading] = useState(true);
-  const [selectedClubImage, setSelectedClubImage] = useState<string | null>(null);
+  const [selectedClubImage, setSelectedClubImage] = useState<string | null>(
+    null
+  );
   const threeRef = useRef<ThreeElevatorSceneHandle>(null);
 
   const goToFloor = (floor: number) => {
@@ -40,7 +46,9 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
   };
 
   const handleClubClick = () => {
-    setSelectedClubImage(FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length]);
+    setSelectedClubImage(
+      FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length]
+    );
     threeRef.current?.playElevatorSequence();
     setTimeout(() => {
       onReachClubFloor(currentFloor);
@@ -67,9 +75,11 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
               disabled={isMoving}
               className={`w-14 h-10 rounded-lg border text-base font-medium transition-all duration-300 shadow-lg ${
                 floor === currentFloor
-                  ? 'bg-amber-500 border-amber-400 text-black'
-                  : 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-gray-500'
-              } ${isMoving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  ? "bg-amber-500 border-amber-400 text-black"
+                  : "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-gray-500"
+              } ${
+                isMoving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+              }`}
             >
               {floor}
             </button>
@@ -84,7 +94,10 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
           onMouseLeave={() => setHovered(false)}
         >
           <img
-            src={selectedClubImage || FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length]}
+            src={
+              selectedClubImage ||
+              FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length]
+            }
             alt={FLOOR_LABELS[(currentFloor - 1) % FLOOR_LABELS.length]}
             className="object-cover w-full h-full cursor-pointer transition-transform duration-300 group-hover:scale-105"
             onClick={handleClubClick}
@@ -92,7 +105,11 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({ onReachClubFloor }
           <button
             onClick={handleClubClick}
             className={`absolute inset-0 flex items-center justify-center bg-black/60 text-white text-5xl font-bold transition-all duration-300
-              ${hovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
+              ${
+                hovered
+                  ? "opacity-100 scale-100"
+                  : "opacity-0 scale-95 pointer-events-none"
+              }`}
             style={{ pointerEvents: hovered ? "auto" : "none" }}
           >
             Go!
