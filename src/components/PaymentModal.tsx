@@ -47,7 +47,7 @@ export default function PaymentModal({
   // const [showPayPalLoading, setShowPayPalLoading] = useState(false);
   const [cardComplete, setCardComplete] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
-  const [notification, setNotification] = useState<{ message: string; type: NotificationType } | null>(null);
+  // Removed notification state
 
   const stripe = useStripe();
   const elements = useElements();
@@ -65,7 +65,7 @@ export default function PaymentModal({
     });
 
     if (error) {
-      setNotification({ message: error.message, type: 'error' });
+      // Notification removed
       setIsProcessing(false);
       return;
     }
@@ -86,10 +86,10 @@ export default function PaymentModal({
     });
     const data = await res.json();
     if (res.ok) {
-      setNotification({ message: "Subscription successful!", type: 'success' });
+      // Notification removed
       onOpenChange(false);
     } else {
-      setNotification({ message: data.error || "Payment failed", type: 'error' });
+      // Notification removed
     }
     setIsProcessing(false);
   };
@@ -117,34 +117,7 @@ export default function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      {/* Notification Bar */}
-      {notification && (
-        <div
-          className={`fixed top-8 left-1/2 transform -translate-x-1/2 px-8 py-3 rounded-xl shadow-xl z-50 text-center text-lg font-bold animate-fade-in
-            ${notification.type === 'success'
-              ? 'bg-gradient-to-r from-green-400 to-cyan-400 text-black border-2 border-green-300'
-              : 'bg-gradient-to-r from-pink-500 to-red-500 text-white border-2 border-pink-300'}
-          `}
-          style={{
-            boxShadow: notification.type === 'success'
-              ? '0 0 24px 4px #2af59899'
-              : '0 0 24px 4px #f759a299',
-            letterSpacing: '0.04em',
-            textShadow: notification.type === 'success'
-              ? '0 0 8px #2af598, 0 0 2px #fff'
-              : '0 0 8px #f759a2, 0 0 2px #fff',
-          }}
-        >
-          {String(notification?.message ?? '')}
-          <button
-            className="ml-4 text-xl font-bold hover:text-black/60 hover:text-white/60"
-            onClick={() => setNotification(null)}
-            aria-label="Close notification"
-          >
-            ×
-          </button>
-        </div>
-      )}
+      {/* Notification Bar removed */}
       <div className="bg-[#181c2b] rounded-2xl shadow-2xl max-w-3xl w-full flex flex-col md:flex-row overflow-hidden border border-[#23263a] relative">
         {/* Close Button */}
         <button
