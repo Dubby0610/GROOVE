@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { useAudio } from './hooks/useAudio';
 import { LoadingScreen } from './components/LoadingScreen';
@@ -6,6 +6,7 @@ import { NavigationIndicator } from './components/NavigationIndicator';
 import { AlleyScene } from './components/AlleyScene';
 import { ElevatorScene } from './components/ElevatorScene';
 import { ClubDoorScene } from './components/ClubDoorScene';
+import  NightClubScene  from './components/NightClubScene';
 
 function MainPage() {
   const navigate = useNavigate();
@@ -75,6 +76,12 @@ function AppRoutes() {
 
   const navigate = useNavigate();
 
+  // Restore selected floor from localStorage on mount
+  useEffect(() => {
+    const storedFloor = localStorage.getItem("selectedClubFloor");
+    if (storedFloor) setSelectedClubFloor(Number(storedFloor));
+  }, []);
+
   // Alley → Elevator
   const handleEnterBuilding = () => {
     setIsLoading(true);
@@ -87,9 +94,10 @@ function AppRoutes() {
     }, 1500);
   };
 
-  // Elevator → Club Door
+  // When user selects a floor in the elevator:
   const handleReachClubFloor = (floor: number) => {
     setSelectedClubFloor(floor);
+    localStorage.setItem("selectedClubFloor", String(floor));
     setIsLoading(true);
     setLoadingMessage("Arriving at the club...");
     setTimeout(() => {
@@ -138,7 +146,21 @@ function AppRoutes() {
             />
           }
         />
-        <Route path="/club-success" element={<ClubSuccessPage />} />
+        <Route
+          path="/club-success"
+          element={
+            selectedClubFloor ? (
+              <NightClubScene floor={selectedClubFloor} />
+            ) : (
+              // fallback: try to get from localStorage
+              localStorage.getItem("selectedClubFloor") ? (
+                <NightClubScene floor={Number(localStorage.getItem("selectedClubFloor"))} />
+              ) : (
+                <div className="flex items-center justify-center h-full text-white text-2xl">No floor selected.</div>
+              )
+            )
+          }
+        />
         <Route path="*" element={<MainPage />} />
       </Routes>
     </div>

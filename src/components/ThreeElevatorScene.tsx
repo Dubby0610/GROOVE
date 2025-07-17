@@ -147,6 +147,7 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
       controls.enablePan = false;
       controls.enableZoom = false;
       controls.target.set(0, 1.2, 0);
+      controls.maxPolarAngle = Math.PI / 2;
       controls.update();
 
       // Mount renderer
