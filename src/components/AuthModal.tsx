@@ -73,6 +73,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         onOpenChange(false);
       }
     } catch (err) {
+      console.log(err);
       setError("Network error");
     } finally {
       setLoading(false);

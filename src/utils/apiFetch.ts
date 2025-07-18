@@ -17,9 +17,8 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   };
 
   let response = await fetch(`${API_URL}${endpoint}`, options);
-  let data = await response.json();
 
-  if (data.error === "Invalid or expired token" && refreshToken) {
+  if (response.status === 403 && refreshToken) {
     const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
