@@ -18,7 +18,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 
   let response = await fetch(`${API_URL}${endpoint}`, options);
 
-  if (response.status === 401 && refreshToken) {
+  if (response.status === 403 && refreshToken) {
     const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -35,7 +35,6 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
     } else {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
-      window.location.href = "/";
       throw new Error("Session expired. Please log in again.");
     }
   }
