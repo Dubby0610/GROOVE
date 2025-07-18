@@ -25,8 +25,9 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
       body: JSON.stringify({ refreshToken }),
     });
     if (refreshRes.ok) {
-      const { accessToken: newAccessToken } = await refreshRes.json();
+      const { accessToken: newAccessToken, refreshToken: refreshToken } = await refreshRes.json();
       localStorage.setItem("accessToken", newAccessToken);
+      localStorage.setItem("refreshToken", refreshToken);
       options.headers = {
         ...(options.headers || {}),
         Authorization: `Bearer ${newAccessToken}`,
