@@ -33,6 +33,9 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
     return true;
   };
 
+  // Add a state to track if in enter zone
+  const [inEnterZone, setInEnterZone] = React.useState(false);
+
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -47,21 +50,25 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       75,
       window.innerWidth / window.innerHeight,
       0.1,
-      1000
+      100
     );
-    camera.position.set(0, 3, 15);
+    camera.position.set(-10.5, 7, -32); // Fixed position
+    camera.lookAt(0, 15, 25); // Fixed target
 
     let human: THREE.Object3D | null = null;
     let mixer: THREE.AnimationMixer | null = null;
     let walkAction: THREE.AnimationAction | null = null;
-    let standAction: THREE.AnimationAction | null = null; // <-- Add this
+    let standAction: THREE.AnimationAction | null = null;
     let isWalking = false;
     let alleyLoaded = false;
 
     const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableRotate = false;
+    controls.enablePan = false;
+    controls.enableZoom = false;
 
     const keys = { w: false, a: false, s: false, d: false, e: false };
-    const speed = 0.1;
+    const speed = 0.08;
 
     const isAnyMoveKey = () => keys.w || keys.a || keys.s || keys.d;
 
@@ -71,22 +78,60 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
     dirLight.position.set(5, 10, 7.5);
     scene.add(dirLight);
 
-    // Load Human GLB with Draco
+    // Load Alley and Human together
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath("/draco/");
-    const humanLoader = new GLTFLoader();
-    humanLoader.setDRACOLoader(dracoLoader);
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(dracoLoader);
 
     let actions: { [key: string]: THREE.AnimationAction } = {};
+    let wallBoxes: THREE.Box3[] = [];
 
-    humanLoader.load("/models/human-draco.glb", (gltf: any) => {
-      human = gltf.scene;
+    function playOnly(actionName: string) {
+      Object.entries(actions).forEach(([name, action]) => {
+        if (name === actionName) {
+          action.enabled = true;
+          action.fadeIn(0.2);
+          action.reset();
+          action.play();
+        } else {
+          action.fadeOut(0.2);
+        }
+      });
+    }
+
+    // Helper to load a GLTF as a Promise
+    function loadGLTF(url: string): Promise<any> {
+      return new Promise((resolve, reject) => {
+        loader.load(url, resolve, undefined, reject);
+      });
+    }
+
+    // Load both models in parallel
+    Promise.all([
+      loadGLTF("/models/alley-draco.glb"),
+      loadGLTF("/models/human-draco.glb")
+    ]).then(([alleyGltf, humanGltf]) => {
+      // --- Add alley model ---
+      scene.add(alleyGltf.scene);
+      // Find wall meshes and compute bounding boxes
+      alleyGltf.scene.traverse((child: any) => {
+        if (child.isMesh && child.name.toLowerCase().includes("wall")) {
+          child.geometry.computeBoundingBox();
+          const box = child.geometry.boundingBox.clone();
+          box.applyMatrix4(child.matrixWorld);
+          wallBoxes.push(box);
+        }
+      });
+      alleyLoaded = true;
+
+      // --- Add human model ---
+      human = humanGltf.scene;
       human.scale.set(3, 3, 3);
-      human.position.set(0, -11.5, 0);
+      human.position.set(0, -11.5, -10);
       scene.add(human);
-
       // Fix materials (for hair, transparency, etc.)
-      human.traverse((child) => {
+      human.traverse((child: any) => {
         if ((child as any).isMesh && (child as any).material) {
           const mat = (child as any).material;
           mat.needsUpdate = true;
@@ -99,57 +144,14 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
           }
         }
       });
-
       mixer = new THREE.AnimationMixer(human);
-
       // Setup all actions, paused by default
-      gltf.animations.forEach((clip: THREE.AnimationClip) => {
+      humanGltf.animations.forEach((clip: THREE.AnimationClip) => {
         actions[clip.name] = mixer!.clipAction(clip);
         actions[clip.name].paused = true;
       });
-
       // Start with Standing
       playOnly("Standing");
-    });
-
-    // Animation switching helper
-    function playOnly(actionName: string) {
-      Object.entries(actions).forEach(([name, action]) => {
-        if (name === actionName) {
-          action.enabled = true;
-          action.fadeIn(0.2); // Smoothly fade in
-          action.reset();
-          action.play();
-        } else {
-          action.fadeOut(0.2); // Smoothly fade out others
-        }
-      });
-    }
-
-    // Load Alley
-    const gltfLoader = new GLTFLoader();
-    let wallBoxes: THREE.Box3[] = [];
-
-    gltfLoader.load("/models/alley.glb", (gltf: any) => {
-      scene.add(gltf.scene);
-
-      // Find wall meshes and compute bounding boxes
-      gltf.scene.traverse((child: any) => {
-        if (child.isMesh && child.name.toLowerCase().includes("wall")) {
-          child.geometry.computeBoundingBox();
-          const box = child.geometry.boundingBox.clone();
-          box.applyMatrix4(child.matrixWorld);
-          wallBoxes.push(box);
-        }
-      });
-
-      alleyLoaded = true; // <-- Set flag when alley is loaded
-
-      // --- STOP WALKING when alley is loaded ---
-      if (walkAction) {
-        walkAction.paused = true;
-        isWalking = false;
-      }
     });
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -180,6 +182,7 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
 
       if (mixer) mixer.update(delta);
 
+      // Only update position if inside walls
       if (human) {
         let moved = false;
         const prevPosition = human.position.clone();
@@ -188,9 +191,13 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         let nextPosition = human.position.clone();
         if (alleyLoaded && isAnyMoveKey()) {
           if (keys.s) {
-            const direction = new THREE.Vector3(0, 0, -1);
+            // Turn 180 degrees before moving backward
+            const originalY = human.rotation.y;
+            human.rotation.y += Math.PI;
+            const direction = new THREE.Vector3(0, 0, 1);
             direction.applyQuaternion(human.quaternion);
             nextPosition.add(direction.multiplyScalar(speed));
+            human.rotation.y = originalY; // Restore original orientation
             moved = true;
           }
           if (keys.w) {
@@ -209,7 +216,6 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
           }
         }
 
-        // Only update position if inside walls
         if (moved && isInsideWalls(nextPosition)) {
           human.position.copy(nextPosition);
         }
@@ -226,21 +232,12 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         }
 
         // Enter zone logic
-        const inEnterZone =
+        const nowInEnterZone =
           human.position.x < 5 &&
           human.position.x > 0 &&
           human.position.z > 27 &&
           human.position.z < 29;
-
-        // Show/hide enter prompt
-        if (enterPromptRef.current) {
-          enterPromptRef.current.style.display = inEnterZone ? "block" : "none";
-        }
-
-        camera.position.x = human.position.x;
-        camera.position.y = human.position.y + 21;
-        camera.position.z = human.position.z - 20;
-        camera.lookAt(human.position.x, human.position.y-1, human.position.z);
+        setInEnterZone(nowInEnterZone);
       }
 
       renderer.render(scene, camera);
@@ -265,39 +262,25 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   return (
     <>
       <canvas ref={canvasRef} className="webgl" />
-      {/* Movement Help */}
+      {/* Single Guide at Center-Bottom */}
       <div
-        ref={movePromptRef}
         style={{
           position: "absolute",
-          top: 20,
-          left: 20,
-          background: "rgba(0,0,0,0.6)",
-          color: "white",
-          padding: "10px 15px",
-          borderRadius: "8px",
-          fontSize: "14px",
-        }}
-      >
-        Move with: W A S D
-      </div>
-      {/* Enter Prompt (conditionally shown) */}
-      <div
-        ref={enterPromptRef}
-        style={{
-          display: "none", // hidden by default
-          position: "absolute",
-          bottom: 50,
           left: "50%",
+          bottom: 40,
           transform: "translateX(-50%)",
           background: "rgba(0,0,0,0.7)",
-          color: "#fff",
-          padding: "12px 20px",
-          borderRadius: "8px",
+          color: "white",
+          padding: "12px 24px",
+          borderRadius: "10px",
           fontSize: "16px",
+          letterSpacing: "0.1em",
+          boxShadow: "0 2px 16px 0 rgba(0,0,0,0.25)",
+          fontWeight: 600,
+          display: inEnterZone ? "block" : "block",
         }}
       >
-        Press "E" to enter the building
+        {inEnterZone ? 'Press "E" to enter' : 'Move with: W A S D'}
       </div>
     </>
   );

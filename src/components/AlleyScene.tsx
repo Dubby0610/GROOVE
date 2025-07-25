@@ -40,32 +40,34 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
              style={{ animationDuration: '4s' }} />
         
         {/* Animated neon signs */}
-        <div className={`absolute top-20 left-10 text-pink-400 text-2xl font-bold transition-all duration-300 ${
+        <div className={`absolute top-16 left-10 text-pink-400 text-5xl font-extrabold transition-all duration-300 drop-shadow-[0_0_20px_rgba(255,0,128,0.7)] ${
           flickerState ? 'opacity-100 animate-pulse' : 'opacity-30'
         }`}>
-          <div className="neon-sign transform hover:scale-110 transition-transform duration-300">
+          <div className="neon-sign transform hover:scale-110 transition-transform duration-300 tracking-widest">
             DISCO
           </div>
-          <div className="absolute inset-0 neon-sign blur-sm opacity-50">DISCO</div>
+          <div className="absolute inset-0 neon-sign blur-lg opacity-60">DISCO</div>
         </div>
         
-        <div className="absolute top-32 right-16 text-cyan-400 text-lg animate-pulse" 
-             style={{ animationDelay: '0.5s' }}>
+        <div className="absolute top-32 right-16 text-cyan-400 text-3xl font-bold animate-pulse drop-shadow-[0_0_16px_rgba(0,255,255,0.6)]" 
+             style={{ animationDelay: '0.5s', letterSpacing: '0.2em' }}>
           <div className="neon-sign transform hover:scale-105 transition-transform duration-300">
             24/7
           </div>
-          <div className="absolute inset-0 neon-sign blur-sm opacity-40">24/7</div>
+          <div className="absolute inset-0 neon-sign blur-lg opacity-40">24/7</div>
         </div>
         
         {/* Additional animated neon elements */}
-        <div className="absolute top-60 left-20 text-red-400 text-sm animate-pulse"
-             style={{ animationDelay: '2s', animationDuration: '3s' }}>
-          <div className="neon-sign opacity-70">LIVE</div>
+        <div className="absolute top-60 left-20 text-red-400 text-2xl font-bold animate-pulse drop-shadow-[0_0_12px_rgba(255,64,64,0.5)]"
+             style={{ animationDelay: '2s', animationDuration: '3s', letterSpacing: '0.15em' }}>
+          <div className="neon-sign opacity-80">LIVE</div>
+          <div className="absolute inset-0 neon-sign blur-md opacity-50">LIVE</div>
         </div>
         
-        <div className="absolute bottom-80 right-8 text-yellow-400 text-xs animate-pulse"
-             style={{ animationDelay: '1.5s', animationDuration: '2.5s' }}>
-          <div className="neon-sign opacity-60">OPEN</div>
+        <div className="absolute bottom-80 right-8 text-yellow-400 text-xl font-bold animate-pulse drop-shadow-[0_0_10px_rgba(255,255,0,0.4)]"
+             style={{ animationDelay: '1.5s', animationDuration: '2.5s', letterSpacing: '0.12em' }}>
+          <div className="neon-sign opacity-70">OPEN</div>
+          <div className="absolute inset-0 neon-sign blur-md opacity-40">OPEN</div>
         </div>
         
         {/* Enhanced steam particles with floating animation */}
@@ -77,13 +79,13 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
              style={{ opacity: steamOpacity * 0.5, animationDelay: '2s', animationDuration: '3.5s' }} />
         
         {/* Animated graffiti elements with glow effects */}
-        <div className="absolute left-8 bottom-40 text-red-400 font-bold text-sm opacity-70 transform -rotate-12 hover:opacity-100 transition-opacity duration-300">
-          <div className="animate-pulse" style={{ animationDuration: '3s' }}>GROOVE</div>
-          <div className="absolute inset-0 blur-sm opacity-50 animate-pulse" style={{ animationDuration: '3s' }}>GROOVE</div>
+        <div className="absolute left-8 bottom-40 text-red-400 font-extrabold text-3xl opacity-80 transform -rotate-12 hover:opacity-100 transition-opacity duration-300 drop-shadow-[0_0_18px_rgba(255,0,0,0.5)]">
+          <div className="animate-pulse tracking-widest" style={{ animationDuration: '3s' }}>GROOVE</div>
+          <div className="absolute inset-0 blur-lg opacity-50 animate-pulse" style={{ animationDuration: '3s' }}>GROOVE</div>
         </div>
-        <div className="absolute right-12 bottom-60 text-blue-400 font-bold text-xs opacity-60 transform rotate-6 hover:opacity-100 transition-opacity duration-300">
-          <div className="animate-pulse" style={{ animationDuration: '2.5s', animationDelay: '1s' }}>FUNK</div>
-          <div className="absolute inset-0 blur-sm opacity-40 animate-pulse" style={{ animationDuration: '2.5s', animationDelay: '1s' }}>FUNK</div>
+        <div className="absolute right-12 bottom-60 text-blue-400 font-extrabold text-2xl opacity-70 transform rotate-6 hover:opacity-100 transition-opacity duration-300 drop-shadow-[0_0_14px_rgba(0,128,255,0.5)]">
+          <div className="animate-pulse tracking-widest" style={{ animationDuration: '2.5s', animationDelay: '1s' }}>FUNK</div>
+          <div className="absolute inset-0 blur-lg opacity-40 animate-pulse" style={{ animationDuration: '2.5s', animationDelay: '1s' }}>FUNK</div>
         </div>
         
         {/* Flickering street light effect */}

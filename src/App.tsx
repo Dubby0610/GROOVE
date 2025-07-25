@@ -73,6 +73,8 @@ function AppRoutes() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState<string | undefined>(undefined);
   const [selectedClubFloor, setSelectedClubFloor] = useState<number | null>(null);
+  // Add a state to track if club floor is being determined
+  const [isDeterminingFloor, setIsDeterminingFloor] = useState(false);
 
   const navigate = useNavigate();
 
@@ -110,11 +112,13 @@ function AppRoutes() {
   const handleEnterClub = () => {
     setIsLoading(true);
     setLoadingMessage('Entering the club...');
+    setIsDeterminingFloor(true);
     playDiscoTrack(false); // Clear
     setTimeout(() => {
       setIsLoading(false);
       setLoadingMessage(undefined);
       navigate('/club-success');
+      setTimeout(() => setIsDeterminingFloor(false), 1000); // Show loading for 1s after navigation
     }, 2000);
   };
 
@@ -149,15 +153,14 @@ function AppRoutes() {
         <Route
           path="/club-success"
           element={
-            selectedClubFloor ? (
-              <NightClubScene floor={selectedClubFloor} />
-            ) : (
-              // fallback: try to get from localStorage
-              localStorage.getItem("selectedClubFloor") ? (
-                <NightClubScene floor={Number(localStorage.getItem("selectedClubFloor"))} />
+            (selectedClubFloor || localStorage.getItem("selectedClubFloor")) ? (
+              isDeterminingFloor ? (
+                <LoadingScreen message="Loading your club experience..." />
               ) : (
-                <div className="flex items-center justify-center h-full text-white text-2xl">No floor selected.</div>
+                <NightClubScene floor={selectedClubFloor || Number(localStorage.getItem("selectedClubFloor"))} />
               )
+            ) : (
+              <div className="flex items-center justify-center h-full text-white text-2xl">No floor selected.</div>
             )
           }
         />

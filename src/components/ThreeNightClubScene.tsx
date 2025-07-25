@@ -74,40 +74,101 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor }) => {
     dracoLoader.setDecoderPath("/draco/");
     loader.setDRACOLoader(dracoLoader);
 
-    let mixer: THREE.AnimationMixer | null = null;
+    // Helper to load a GLTF as a Promise
+    function loadGLTF(url: string): Promise<any> {
+      return new Promise((resolve, reject) => {
+        loader.load(url, resolve, undefined, reject);
+      });
+    }
 
-    const modelPath = `/models/floor_${floor}-draco.glb`;
-    loader.load(
-      modelPath,
-      (gltf: any) => {
-        gltf.scene.position.set(0, 0, 0);
-        gltf.scene.scale.set(2.5, 2.5, 2.5);
-        console.log(gltf.scene);
-        // console.log(gltf.scene.children.length);
-        gltf.scene.traverse((child: any) => {
-          if ((child as THREE.Mesh).isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true; // optional, usually not needed for disco ball
-          }
-        });
-
-        scene.add(gltf.scene);
-
-        // Setup animation mixer and play all animations
-        if (gltf.animations && gltf.animations.length > 0) {
-          mixer = new THREE.AnimationMixer(gltf.scene);
-          gltf.animations.forEach((clip: any) => {
-            const action = mixer!.clipAction(clip);
-            action.setLoop(THREE.LoopRepeat, Infinity); // Make sure it loops
-            action.play();
-          });
+    // Load both models in parallel
+    Promise.all([
+      loadGLTF(`/models/floor_${floor}-draco.glb`),
+      loadGLTF("/models/dancer-draco.glb")
+    ]).then(([clubGltf, dancerGltf]) => {
+      // --- Add club model ---
+      clubGltf.scene.position.set(0, 0, 0);
+      clubGltf.scene.scale.set(2.5, 2.5, 2.5);
+      clubGltf.scene.traverse((child: any) => {
+        if ((child as THREE.Mesh).isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
         }
-      },
-      undefined,
-      (error: any) => {
-        console.error("Error loading club model:", error);
+      });
+      scene.add(clubGltf.scene);
+
+      // --- Add dancer model ---
+      const dancer = dancerGltf.scene;
+      dancer.position.set(0, -0.1, -2.5); // Adjust as needed
+      dancer.scale.set(2.5, 2.5, 2.5);
+      dancer.traverse((child: any) => {
+        if (child.isMesh) {
+          // Convert to MeshPhysicalMaterial for realistic PBR and IOR
+          const oldMat = child.material;
+          const newMat = new THREE.MeshPhysicalMaterial({
+            color: oldMat.color ? oldMat.color.clone() : undefined,
+            map: oldMat.map || null,
+            roughness: 0.8,      // Higher = less shiny
+            metalness: 0.1,      // Lower = less metallic
+            ior: 1.4,            // Index of Refraction (1.3-1.5 for skin/clothes)
+            reflectivity: 0.2,   // Lower = less mirror-like
+            transmission: 0,     // 0 for non-glass
+            thickness: 0.01,     // For transmission, not needed here
+            clearcoat: 0.1,      // Subtle clearcoat for realism
+            clearcoatRoughness: 0.8,
+            skinning: oldMat.skinning || false,
+            transparent: oldMat.transparent || false,
+            opacity: oldMat.opacity !== undefined ? oldMat.opacity : 1,
+          });
+          if (oldMat.map) {
+            oldMat.map.encoding = THREE.sRGBEncoding;
+            oldMat.map.needsUpdate = true;
+          }
+          child.material = newMat;
+          child.material.needsUpdate = true;
+
+          // Enable shadows for dancer
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      scene.add(dancer);
+
+      // --- Setup animation mixers ---
+      let mixer: THREE.AnimationMixer | null = null;
+      if (clubGltf.animations && clubGltf.animations.length > 0) {
+        mixer = new THREE.AnimationMixer(clubGltf.scene);
+        clubGltf.animations.forEach((clip: any) => {
+          const action = mixer!.clipAction(clip);
+          action.setLoop(THREE.LoopRepeat, Infinity);
+          action.play();
+        });
       }
-    );
+
+      let dancerMixer: THREE.AnimationMixer | null = null;
+      if (dancerGltf.animations && dancerGltf.animations.length > 0) {
+        dancerMixer = new THREE.AnimationMixer(dancer);
+        dancerGltf.animations.forEach((clip: any) => {
+          const action = dancerMixer!.clipAction(clip);
+          action.setLoop(THREE.LoopRepeat, Infinity);
+          action.play();
+        });
+      }
+
+      // --- Start animation loop ---
+      const clock = new THREE.Clock();
+      const animate = () => {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+        if (mixer) mixer.update(delta);
+        if (dancerMixer) dancerMixer.update(delta);
+        // ... your other animation code ...
+        renderer.render(scene, camera);
+      };
+      animate();
+    }).catch((error) => {
+      console.error("Error loading models:", error);
+    });
 
     // create spotlight inside the discoball
     // const insideLight = new THREE.PointLight('#FF0000', 500);
@@ -211,8 +272,8 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor }) => {
       createBottomSpotLight(0x980022, 0, 4, 0, 50000),    // Bottom spotlight targeting disco ball
       createStaticLights(0x002298, -5, 8, 0, 50000),      // Other point lights
       createStaticLights(0x002298, 5, 8, 0, 50000),
-      createStaticLights(0x002298, 0, 8, -5, 50000),
-      createStaticLights(0x002298, 0, 8, 5, 50000),
+      createStaticLights(0x002298, 0, 8, -5, 5000),
+      createStaticLights(0x002298, 0, 8, 5, 5000),
     ];
 
     movingLights.forEach(({ movingLight }) => {
@@ -414,9 +475,14 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor }) => {
       });
 
       // Update animations
-      if (mixer) {
-        mixer.update(delta); // Use the same delta time
-      }
+      // The mixers are now handled within the Promise.all block
+      // if (mixer) {
+      //   mixer.update(delta); // Use the same delta time
+      // }
+
+      // if (dancerMixer) {
+      //   dancerMixer.update(delta);
+      // }
 
       renderer.render(scene, camera);
     };
