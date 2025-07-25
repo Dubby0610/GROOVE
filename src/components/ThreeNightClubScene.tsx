@@ -6,9 +6,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 interface ThreeNightClubSceneProps {
   floor: number;
+  onLoaded?: () => void;
 }
 
-const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor }) => {
+const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoaded }) => {
   const mountRef = useRef<HTMLDivElement>(null);
 
   // Add these color constants at the top of your component
@@ -46,8 +47,8 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor }) => {
   useEffect(() => {
     if (!mountRef.current) return;
 
-    const width = mountRef.current.clientWidth;
-    const height = mountRef.current.clientHeight;
+    const width = mountRef.current ? mountRef.current.clientWidth : window.innerWidth;
+    const height = mountRef.current ? mountRef.current.clientHeight : window.innerHeight;
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
     camera.position.set(0, 5, 15);
@@ -166,6 +167,7 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor }) => {
         renderer.render(scene, camera);
       };
       animate();
+      if (typeof onLoaded === 'function') onLoaded();
     }).catch((error) => {
       console.error("Error loading models:", error);
     });
@@ -489,8 +491,9 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor }) => {
     animate();
 
     const handleResize = () => {
-      const w = mountRef.current!.clientWidth;
-      const h = mountRef.current!.clientHeight;
+      if (!mountRef.current) return;
+      const w = mountRef.current.clientWidth;
+      const h = mountRef.current.clientHeight;
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();

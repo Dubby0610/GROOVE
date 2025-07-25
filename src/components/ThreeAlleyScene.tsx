@@ -6,9 +6,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 interface AlleySceneProps {
   onEnterBuilding: () => void;
+  onLoaded?: () => void;
 }
 
-const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
+const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding, onLoaded }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const enterPromptRef = useRef<HTMLDivElement | null>(null);
   const movePromptRef = useRef<HTMLDivElement | null>(null);
@@ -152,6 +153,7 @@ const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       });
       // Start with Standing
       playOnly("Standing");
+      if (typeof onLoaded === 'function') onLoaded();
     });
 
     const onKeyDown = (e: KeyboardEvent) => {

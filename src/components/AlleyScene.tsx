@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ThreeAlleyScene from './ThreeAlleyScene';
+import { LoadingScreen } from './LoadingScreen';
 
 interface AlleySceneProps {
   onEnterBuilding: () => void;
@@ -8,6 +9,7 @@ interface AlleySceneProps {
 export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   const [flickerState, setFlickerState] = useState(true);
   const [steamOpacity, setSteamOpacity] = useState(0.6);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Neon sign flickering animation
@@ -28,9 +30,11 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gradient-to-b from-purple-900/30 to-black">
+      {isLoading && <LoadingScreen message="Loading alley..." />}
       {/* Three.js scene */}
       <ThreeAlleyScene 
         onEnterBuilding={onEnterBuilding}
+        onLoaded={() => setIsLoading(false)}
       />
       
       {/* Overlay elements */}
