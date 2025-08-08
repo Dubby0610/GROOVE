@@ -3,6 +3,9 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
 
 interface ThreeNightClubSceneProps {
   floor: number;
@@ -30,20 +33,6 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoad
     RAPID_CHANGE: "rapid_change",
   };
 
-  // Add these constants after COLORS
-  const LIGHT_PATTERNS = {
-    POSITIONS: [
-      { x: 5, y: 15, z: 5 },    // Red
-      { x: -5, y: 15, z: 5 },   // Green
-      { x: -5, y: 15, z: -5 },  // Blue
-      { x: 5, y: 15, z: -5 },   // White
-    ],
-    TIMING: {
-      PATTERN_DURATION: 8,
-      CROSSFADE: 0.5
-    }
-  };
-
   // Add this comment at the top for user guidance
   // If you see type errors for 'three', run: npm i --save-dev @types/three
   useEffect(() => {
@@ -56,12 +45,46 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoad
     camera.position.set(0, 5, 15);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+    // Set renderer pixel ratio for performance
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.autoClear = false; // Important for composer
     mountRef.current.innerHTML = "";
     mountRef.current.appendChild(renderer.domElement);
+
+    // --- BLOOM SETUP ---
+    const BLOOM_LAYER = 1;
+    const bloomParams = {
+      exposure: 1,
+      bloomStrength: 1.5,
+      bloomThreshold: 0,
+      bloomRadius: 0.2,
+    };
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    // Render bloom at half resolution for performance
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(width / 2, height / 2),
+      bloomParams.bloomStrength,
+      bloomParams.bloomRadius,
+      bloomParams.bloomThreshold
+    );
+    composer.addPass(bloomPass);
+    // Helper to set bloom layer
+    function setBloomLayer(object: THREE.Object3D, enabled: boolean) {
+      object.traverse((child: any) => {
+        if (child instanceof THREE.Mesh) {
+          if (enabled) {
+            child.layers.enable(0);           // <--- Add this line
+            child.layers.enable(BLOOM_LAYER); // <--- Already present
+          } else {
+            child.layers.set(0);
+          }
+        }
+      });
+    }
 
     scene.add(new THREE.AmbientLight(0xcccccc, 0.3));
 
@@ -127,7 +150,28 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoad
           child.receiveShadow = true;
         }
       });
-      console.log(clubGltf.scene);
+      // --- Set bloom layer for dance floor meshes ---
+      // Find by name: 'Dance-floor' and 'Dance-floor001'
+      const danceFloorMeshes: THREE.Object3D[] = [];
+      // Store original materials for dance floor meshes
+      const danceFloorOriginalMaterials: Record<string, THREE.Material> = {};
+      clubGltf.scene.traverse((child: any) => {
+        if (child.name === 'Dance-floor' || child.name === 'Dance-floor001') {
+          setBloomLayer(child, true);
+          danceFloorMeshes.push(child);
+          child.traverse((mesh: any) => {
+            if (mesh instanceof THREE.Mesh) {
+              danceFloorOriginalMaterials[mesh.uuid] = mesh.material;
+              // Optionally, ensure the material supports emissive
+              if (mesh.material && 'emissive' in mesh.material) {
+                mesh.material.emissive = mesh.material.emissive || new THREE.Color(0x222222);
+                mesh.material.emissiveIntensity = 1;
+              }
+            }
+          });
+        }
+      });
+      console.log(clubGltf.scene)
       scene.add(clubGltf.scene);
 
       // Optionally setup club animation mixer
@@ -247,10 +291,40 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoad
 
       // --- Animation loop ---
       const clock = new THREE.Clock();
+      const darkMaterial = new THREE.MeshBasicMaterial({ color: "black" });
+      const materials: Record<string, THREE.Material> = {};
+      // Throttle animation loop to 30 FPS for performance
+      let lastFrame = 0;
+      const targetFPS = 30;
+      // Helper to darken non-bloom objects
+      function darkenNonBloom(obj: THREE.Object3D) {
+        if (obj instanceof THREE.Mesh && obj.layers.mask !== BLOOM_LAYER) {
+          materials[obj.uuid] = (obj as any).material;
+          (obj as any).material = darkMaterial;
+        }
+      }
+      function restoreMaterial(obj: THREE.Object3D) {
+        if (obj instanceof THREE.Mesh && materials[obj.uuid]) {
+          (obj as any).material = materials[obj.uuid];
+          delete materials[obj.uuid];
+        }
+      }
       const animate = () => {
         requestAnimationFrame(animate);
+        const now = performance.now();
+        if (now - lastFrame < 1000 / targetFPS) return;
+        lastFrame = now;
         const delta = clock.getDelta();
         const time = clock.getElapsedTime();
+        // Animate dance floor emissive for glow
+        danceFloorMeshes.forEach((group) => {
+          group.traverse((mesh: any) => {
+            if (mesh instanceof THREE.Mesh && mesh.material && 'emissive' in mesh.material) {
+              // Animate emissive intensity for a lighter, pulsing glow
+              mesh.material.emissiveIntensity = 2.5 + Math.sin(time * 4 + mesh.id) * 2.0;
+            }
+          });
+        });
         // Animation state machine for static lights
         switch (animationState) {
           case AnimationState.INITIAL:
@@ -369,6 +443,16 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoad
         // Update model animations
         if (mixer) mixer.update(delta);
         if (dancerMixer) dancerMixer.update(delta);
+        // --- BLOOM RENDERING ---
+        // 1. Render bloom only for dance floor
+        scene.traverse(darkenNonBloom);
+        camera.layers.set(BLOOM_LAYER);
+        renderer.clear(); // Clear before bloom pass
+        composer.render();
+        // 2. Render the rest of the scene (no bloom)
+        scene.traverse(restoreMaterial);
+        camera.layers.set(0);
+        renderer.clearDepth(); // Clear depth before normal render
         renderer.render(scene, camera);
       };
       animate();
@@ -380,6 +464,7 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoad
         const w = mountRef.current.clientWidth;
         const h = mountRef.current.clientHeight;
         renderer.setSize(w, h);
+        composer.setSize(w, h);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
       };
