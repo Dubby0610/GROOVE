@@ -58,7 +58,7 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoad
     const BLOOM_LAYER = 1;
     const bloomParams = {
       exposure: 1,
-      bloomStrength: 1.5,
+      bloomStrength: 2.5,
       bloomThreshold: 0,
       bloomRadius: 0.2,
     };
@@ -67,9 +67,9 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoad
     // Render bloom at half resolution for performance
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(width / 2, height / 2),
-      bloomParams.bloomStrength,
-      bloomParams.bloomRadius,
-      bloomParams.bloomThreshold
+      bloomParams.bloomStrength, // strength
+      bloomParams.bloomRadius,   // radius
+      bloomParams.bloomThreshold // threshold
     );
     composer.addPass(bloomPass);
     // Helper to set bloom layer
@@ -151,12 +151,12 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoad
         }
       });
       // --- Set bloom layer for dance floor meshes ---
-      // Find by name: 'Dance-floor' and 'Dance-floor001'
+      // Find by name: 'Dance-floor'
       const danceFloorMeshes: THREE.Object3D[] = [];
       // Store original materials for dance floor meshes
       const danceFloorOriginalMaterials: Record<string, THREE.Material> = {};
       clubGltf.scene.traverse((child: any) => {
-        if (child.name === 'Dance-floor' || child.name === 'Dance-floor001') {
+        if (child.name === 'Dance-floor') {
           setBloomLayer(child, true);
           danceFloorMeshes.push(child);
           child.traverse((mesh: any) => {

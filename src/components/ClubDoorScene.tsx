@@ -246,7 +246,7 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
       </div>
 
       {/* DJ Voice-over message only if authenticated and not showing auth modal */}
-      {isAuthenticated && showWelcomeMessage && !authModalOpen && (
+      {((isAuthenticated && showWelcomeMessage && !authModalOpen) || (!showPaymentModal && !authModalOpen)) && (
         <div
           className="absolute bottom-20 left-1/2 transform -translate-x-1/2 max-w-md mx-4 z-20"
           onMouseEnter={() => setDjHovered(true)}
