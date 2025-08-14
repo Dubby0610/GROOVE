@@ -7,7 +7,7 @@ import App from "./App.tsx";
 import "./index.css";
 
 const stripePromise = loadStripe(
-  "pk_test_51RgYMrLJMvQ3XoVWf5AuqIJgkaGN6RDGtsfqLMEc4VxRqtzj12EIxAjbkkWIuBaos4KyzVGQO81Jf0PBjQwIDZfH00s8wL5eum"
+  "pk_test_51RgYN6Q9yu5psNP69R1oXojRV7fw6Z5ESUAWc4YcGD3aN0pm9faTiEvmkeKH5gvmjl9au6AvpbsK9rhR1Fh0cUam00wuCC1qZg"
 );
 
 createRoot(document.getElementById("root")!).render(

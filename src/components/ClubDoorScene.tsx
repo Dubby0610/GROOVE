@@ -174,6 +174,14 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
             setShowEntryModal(true);
             return;
           }
+          if(data.remaining_time_seconds > 0) {
+            setEntryPeriod({
+              start: data.start_date || new Date().toISOString(),
+              end: data.end_date,
+            });
+            setShowEntryModal(true);
+            return;
+          }
         }
         // No subscription or inactive/expired - show payment modal
         setShowPaymentModal(true);

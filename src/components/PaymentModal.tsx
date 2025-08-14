@@ -15,33 +15,31 @@ interface PaymentModalProps {
 
 const plans = [
   {
-    id: "daily",
-    price_id: "price_1RggptLJMvQ3XoVWzDBZnVmt",
-    name: "Daily Pass",
-    desc: "One night access",
+    id: "onehour",
+    amount: 199, // cents
+    name: "1-Hour Pass",
+    desc: "Timed entry (shows countdown)",
     price: "$1.99",
     color: "pink",
   },
   {
-    id: "monthly",
-    price_id: "price_1RggqfLJMvQ3XoVWB88NEbSu",
-    name: "VIP Monthly",
-    desc: "Unlimited access + perks",
+    id: "oneday",
+    amount: 2999, // cents
+    name: "Daily Pass",
+    desc: "24 hours access",
     price: "$29.99",
     color: "purple",
   },
-];
+] as const;
 
-type NotificationType = 'success' | 'error' | null;
+// notifications removed
 
 export default function PaymentModal({
   open,
   onOpenChange,
   subscription,
 }: PaymentModalProps) {
-  const [selectedPlan, setSelectedPlan] = useState(
-    "price_1RggptLJMvQ3XoVWzDBZnVmt"
-  );
+  const [selectedPlan, setSelectedPlan] = useState<typeof plans[number]["id"]>("onehour");
   // const [paymentMethod, setPaymentMethod] = useState<"card">("card");
   const [isProcessing, setIsProcessing] = useState(false);
   // const [showPayPalLoading, setShowPayPalLoading] = useState(false);
@@ -52,50 +50,59 @@ export default function PaymentModal({
   const stripe = useStripe();
   const elements = useElements();
 
-  // Simulate Credit Card payment
+  // Create PaymentIntent and confirm
   const handleCreditCardPayment = async () => {
     setIsProcessing(true);
     if (!stripe || !elements) return;
 
     const cardElement = elements.getElement(CardElement);
-    const { error, paymentMethod } = await stripe.createPaymentMethod({
-      type: "card",
-      card: cardElement!,
-      billing_details: { email: user?.email },
-    });
+    const selected = plans.find(p => p.id === selectedPlan)!;
 
-    if (error) {
-      // Notification removed
-      setIsProcessing(false);
-      return;
-    }
-    console.log(paymentMethod);
-
-    // Send paymentMethod.id to backend
-    const res = await apiFetch(`/payment/subscribe`, {
+    // 1) Create payment intent
+    const intentRes = await apiFetch(`/payment/intent`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
       },
       body: JSON.stringify({
-        user,
-        plan: selectedPlan,
-        paymentMethodId: paymentMethod.id,
+        plan: selected.id,
+        method: "card",
+        amount: selected.amount,
+        currency: "usd",
       }),
     });
-    const data = await res.json();
-    if (res.ok) {
-      // Notification removed
+    if (!intentRes.ok) {
+      setIsProcessing(false);
+      return;
+    }
+    const { clientSecret } = await intentRes.json();
+
+    // 2) Confirm card payment on client
+    const confirm = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardElement!,
+        billing_details: { email: user?.email ?? undefined },
+      },
+    });
+
+    if (confirm.error || confirm.paymentIntent?.status !== "succeeded") {
+      setIsProcessing(false);
+      return;
+    }
+
+    // 3) Verify with backend to create subscription record
+    const verifyRes = await apiFetch(`/payment/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentIntentId: confirm.paymentIntent!.id, plan: selected.id }),
+    });
+    if (verifyRes.ok) {
       onOpenChange(false);
-    } else {
-      // Notification removed
     }
     setIsProcessing(false);
   };
 
-  const payAmount =
-    plans.find((plan) => plan.price_id === selectedPlan)?.price || "$0.00";
+  const payAmount = plans.find((p) => p.id === selectedPlan)?.price || "$0.00";
   useEffect(() => {
     if (open) {
       console.log(open);
@@ -158,25 +165,25 @@ export default function PaymentModal({
                   key={plan.id}
                   className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all
                     ${
-                      selectedPlan === plan.price_id
+                      selectedPlan === plan.id
                         ? plan.color === "pink"
                           ? "border-pink-400 bg-pink-400/10"
                           : "border-purple-400 bg-purple-400/10"
                         : "border-[#35395a] hover:border-pink-400"
                     }`}
-                  onClick={() => setSelectedPlan(plan.price_id)}
+                  onClick={() => setSelectedPlan(plan.id)}
                 >
                   <div className="flex items-center">
                     <span
                       className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                        selectedPlan === plan.price_id
+                        selectedPlan === plan.id
                           ? plan.color === "pink"
                             ? "border-pink-400"
                             : "border-purple-400"
                           : "border-gray-500"
                       }`}
                     >
-                      {selectedPlan === plan.price_id && (
+                      {selectedPlan === plan.id && (
                         <span
                           className={`w-3 h-3 rounded-full ${
                             plan.color === "pink"
