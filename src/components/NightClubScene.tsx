@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import ThreeNightClubScene from "./ThreeNightClubScene";
 import { LoadingScreen } from "./LoadingScreen";
 import { apiFetch } from "../utils/apiFetch";
@@ -17,7 +18,9 @@ interface NightClubSceneProps {
 const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [remaining, setRemaining] = useState<number | null>(null);
+  const [timerStarted, setTimerStarted] = useState(false);
   const timerRef = useRef<number | null>(null);
+  const navigate = useNavigate();
 
   // Fetch subscription on mount to get remaining time for hourly plan
   useEffect(() => {
@@ -34,10 +37,17 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
     load();
   }, []);
 
-  // Tick every minute to update backend and UI
+  // Start timer only after 3D models are loaded
+  const handleModelsLoaded = () => {
+    setIsLoading(false);
+    setTimerStarted(true);
+  };
+
+  // Tick every minute to update backend and UI (only after models are loaded)
   useEffect(() => {
-    if (remaining === null) return;
+    if (!timerStarted || remaining === null) return;
     if (remaining <= 0) return;
+    
     // start interval aligned to minutes
     const tick = async () => {
       try {
@@ -48,38 +58,48 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
         });
         if (res.ok) {
           const data = await res.json();
-          setRemaining(data.remaining_time_seconds);
+          const newRemaining = data.remaining_time_seconds;
+          setRemaining(newRemaining);
+          
+          // Auto-logout when time reaches 0
+          if (newRemaining <= 0) {
+            if (timerRef.current) window.clearInterval(timerRef.current);
+            navigate('/sign-out', { state: { reason: 'time_expired' } });
+          }
         }
       } catch {}
     };
+    
     timerRef.current = window.setInterval(tick, 60 * 1000) as unknown as number;
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current);
     };
-  }, [remaining]);
-  // const idx = (floor - 1) % FLOOR_LABELS.length;
-  // const label = FLOOR_LABELS[idx];
+  }, [remaining, timerStarted, navigate]);
+
+  // Handle manual logout
+  const handleLogout = async () => {
+    try {
+      await apiFetch(`/payment/cancel`, { method: "POST" });
+    } finally {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+      setRemaining(0);
+      navigate('/sign-out', { state: { reason: 'manual_logout' } });
+    }
+  };
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      <ThreeNightClubScene floor={floor} onLoaded={() => setIsLoading(false)} />
+      <ThreeNightClubScene floor={floor} onLoaded={handleModelsLoaded} />
       {isLoading && (
         <LoadingScreen message="Loading your club experience..." />
       )}
-      {remaining !== null && (
+      {remaining !== null && timerStarted && (
         <div className="absolute top-6 right-6 bg-black/50 text-white px-4 py-2 rounded-lg text-sm">
-          Time left: {Math.max(0, Math.floor(remaining / 60))}m {Math.max(0, remaining % 60)}s
+          Time left: {Math.max(0, Math.floor(remaining / 60))}m
         </div>
       )}
       <button
-        onClick={async () => {
-          try {
-            await apiFetch(`/payment/cancel`, { method: "POST" });
-          } finally {
-            if (timerRef.current) window.clearInterval(timerRef.current);
-            setRemaining(0);
-          }
-        }}
+        onClick={handleLogout}
         className="absolute top-6 left-6 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm"
       >
         Logout / Unsubscribe

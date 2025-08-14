@@ -37,6 +37,10 @@
     animation: fadeIn 0.8s ease-in-out;
   }
   
+  .animate-fade-in-slow {
+    animation: fadeIn 1.2s ease-in-out;
+  }
+  
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -78,6 +82,10 @@
   
   .animate-shimmer {
     animation: shimmer 4s ease-in-out infinite;
+  }
+  
+  .drop-shadow-neon {
+    filter: drop-shadow(0 0 8px currentColor);
   }
   
   @keyframes shimmer {

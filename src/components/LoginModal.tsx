@@ -6,11 +6,15 @@ interface LoginModalProps {
   period: { start: string; end: string } | null;
   onLogin: () => void;
   user: { id: string; email: string } | null;
-  subscription?: { start_date?: string; end_date?: string; plan?: string; status?: string } | null;
+  subscription?: { start_date?: string; end_date?: string; plan?: string; status?: string; remaining_time_seconds?: number } | null;
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ open, onOpenChange, period, onLogin, user, subscription }) => {
   if (!open || !period) return null;
+
+  // Check if this is a onehour subscription
+  const isOneHourPlan = subscription?.plan === "onehour";
+  const remainingMinutes = subscription?.remaining_time_seconds ? Math.floor(subscription.remaining_time_seconds / 60) : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-[#0f2027] via-[#2c5364] to-[#232526] backdrop-blur-md">
@@ -55,11 +59,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onOpenChange, period, onL
             </div>
           )}
           <div className="mb-8 w-full text-center animate-fade-in-slow">
-            <div className="text-cyan-300 mb-2 font-semibold text-lg">Your valid entry period:</div>
+            <div className="text-cyan-300 mb-2 font-semibold text-lg">
+              {isOneHourPlan ? "Your remaining time:" : "Your valid entry period:"}
+            </div>
             <div className="text-[#2af598] font-mono text-xl bg-black/30 rounded-lg px-4 py-2 border border-[#2af598] shadow-inner">
-              {new Date(period.start).toLocaleString()}<br />
-              <span className="text-gray-500">to</span><br />
-              {new Date(period.end).toLocaleString()}
+              {isOneHourPlan ? (
+                remainingMinutes !== null ? (
+                  <span className="text-2xl font-bold">{remainingMinutes}m</span>
+                ) : (
+                  <span className="text-red-400">Time loading...</span>
+                )
+              ) : (
+                <>
+                  {new Date(period.start).toLocaleString()}<br />
+                  <span className="text-gray-500">to</span><br />
+                  {new Date(period.end).toLocaleString()}
+                </>
+              )}
             </div>
           </div>
           <button

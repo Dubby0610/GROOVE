@@ -7,6 +7,7 @@ import { ElevatorScene } from './components/ElevatorScene';
 import { ClubDoorScene } from './components/ClubDoorScene';
 import  NightClubScene  from './components/NightClubScene';
 import { ImageBasedLanding } from './components/ImageBasedLanding';
+import SignOutPage from './components/SignOutPage';
 
 function MainPage() {
   const navigate = useNavigate();
@@ -100,6 +101,7 @@ function AppRoutes() {
             )
           }
         />
+        <Route path="/sign-out" element={<SignOutPage />} />
         <Route path="*" element={<MainPage />} />
       </Routes>
     </div>

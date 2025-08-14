@@ -163,24 +163,30 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
 
         // Now check subscription status
         if (data && data.status === "active") {
-          const now = new Date();
-          const end = new Date(data.end_date);
-          if (end > now) {
-            // Active subscription - show login modal
-            setEntryPeriod({
-              start: data.start_date || new Date().toISOString(),
-              end: data.end_date,
-            });
-            setShowEntryModal(true);
-            return;
-          }
-          if(data.remaining_time_seconds > 0) {
-            setEntryPeriod({
-              start: data.start_date || new Date().toISOString(),
-              end: data.end_date,
-            });
-            setShowEntryModal(true);
-            return;
+          // For onehour plans, check remaining time
+          if (data.plan === "onehour") {
+            if (data.remaining_time_seconds > 0) {
+              // Set entry period for onehour plan (will show remaining time in modal)
+              setEntryPeriod({
+                start: data.start_date || new Date().toISOString(),
+                end: data.end_date,
+              });
+              setShowEntryModal(true);
+              return;
+            }
+          } else {
+            // For other plans (oneday), check end date
+            const now = new Date();
+            const end = new Date(data.end_date);
+            if (end > now) {
+              // Active subscription - show login modal
+              setEntryPeriod({
+                start: data.start_date || new Date().toISOString(),
+                end: data.end_date,
+              });
+              setShowEntryModal(true);
+              return;
+            }
           }
         }
         // No subscription or inactive/expired - show payment modal
