@@ -61,6 +61,72 @@
     }
   }
   
+  .animate-twinkle {
+    animation: twinkle 3s ease-in-out infinite;
+  }
+  
+  @keyframes twinkle {
+    0%, 100% { 
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    50% { 
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 4s ease-in-out infinite;
+  }
+  
+  @keyframes shimmer {
+    0%, 100% { 
+      opacity: 0.4;
+      transform: scale(1) rotate(0deg);
+    }
+    25% { 
+      opacity: 1;
+      transform: scale(1.1) rotate(90deg);
+    }
+    50% { 
+      opacity: 0.8;
+      transform: scale(1.2) rotate(180deg);
+    }
+    75% { 
+      opacity: 0.6;
+      transform: scale(1.1) rotate(270deg);
+    }
+  }
+  
+  /* Mobile optimizations for glitter effects */
+  @media (max-width: 768px) {
+    .animate-pulse {
+      animation-duration: 3s;
+    }
+    
+    .animate-twinkle {
+      animation-duration: 4s;
+    }
+    
+    .animate-shimmer {
+      animation-duration: 5s;
+    }
+  }
+  
+  /* Enhanced glitter particle effects */
+  .glitter-particle {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+  }
+  
+  /* Optimized sparkle animations for mobile */
+  @media (max-width: 640px) {
+    .animate-ping {
+      animation-duration: 2s;
+    }
+  }
+  
   .animate-flicker {
     animation: flicker 2s ease-in-out infinite;
   }
@@ -76,8 +142,22 @@
   }
   
   @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
+    0%, 100% { 
+      transform: translateY(0px) translateX(0px) rotate(0deg);
+      opacity: 0.6;
+    }
+    25% { 
+      transform: translateY(-20px) translateX(10px) rotate(90deg);
+      opacity: 1;
+    }
+    50% { 
+      transform: translateY(-10px) translateX(-5px) rotate(180deg);
+      opacity: 0.8;
+    }
+    75% { 
+      transform: translateY(-30px) translateX(15px) rotate(270deg);
+      opacity: 0.9;
+    }
   }
   
   .animate-drift {
