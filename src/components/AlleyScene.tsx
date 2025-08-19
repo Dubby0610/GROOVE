@@ -10,6 +10,7 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   const [flickerState, setFlickerState] = useState(true);
   const [steamOpacity, setSteamOpacity] = useState(0.6);
   const [isLoading, setIsLoading] = useState(true);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     // Neon sign flickering animation
@@ -25,11 +26,33 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
     return () => {
       clearInterval(flickerInterval);
       clearInterval(steamInterval);
+      // Stop background music
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
     };
   }, []);
 
+  // Play music only after loading is complete
+  useEffect(() => {
+    if (!isLoading && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.volume = 0.7;
+      audioRef.current.play().catch(() => {});
+    }
+  }, [isLoading]);
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gradient-to-b from-purple-900/30 to-black">
+      {/* Background music for alley */}
+      <audio
+        ref={audioRef}
+        src="/sounds/bbc_new-york.mp3"
+        loop
+        autoPlay
+        style={{ display: 'none' }}
+      />
       {isLoading && <LoadingScreen message="Loading alley..." />}
       {/* Three.js scene */}
       <ThreeAlleyScene 
