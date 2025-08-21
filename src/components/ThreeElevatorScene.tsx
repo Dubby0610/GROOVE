@@ -14,6 +14,9 @@ export interface ThreeElevatorSceneHandle {
   playElevatorSequence: () => void;
   getAnimationDuration: () => number;
   isAnimationRunning: () => boolean;
+  getCurrentKeyframe: () => number;
+  getCurrentPhase: () => 'closing' | 'closed' | 'opening' | 'idle';
+  getPhaseProgress: () => number;
 }
 
 let cachedElevator: THREE.Group | null = null;
@@ -73,6 +76,34 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
           return elevatorActionRef.current.isRunning();
         }
         return false;
+      },
+      getCurrentKeyframe: () => {
+        if (elevatorActionRef.current && elevatorActionRef.current.isRunning()) {
+          const action = elevatorActionRef.current;
+          const duration = action.getClip().duration;
+          const currentTime = action.time;
+          // Convert time to keyframe (300 keyframes over animation duration)
+          return Math.floor((currentTime / duration) * 300);
+        }
+        return 0;
+      },
+      getCurrentPhase: () => {
+        const keyframe = Math.floor((elevatorProgress * 300));
+        if (keyframe <= 70) return 'closing';
+        if (keyframe <= 230) return 'closed';
+        if (keyframe <= 300) return 'opening';
+        return 'idle';
+      },
+      getPhaseProgress: () => {
+        const keyframe = Math.floor((elevatorProgress * 300));
+        if (keyframe <= 70) {
+          return keyframe / 70; // 0-70 frames
+        } else if (keyframe <= 230) {
+          return (keyframe - 71) / (230 - 71); // 71-230 frames
+        } else if (keyframe <= 300) {
+          return (keyframe - 231) / (300 - 231); // 231-300 frames
+        }
+        return 0;
       },
     }));
 

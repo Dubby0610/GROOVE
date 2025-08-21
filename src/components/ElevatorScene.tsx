@@ -3,7 +3,7 @@ import ThreeElevatorScene, {
   ThreeElevatorSceneHandle,
 } from "./ThreeElevatorScene";
 import { LoadingScreen } from "./LoadingScreen";
-import { useElevatorAudio } from "../hooks/useElevatorAudio";
+import { useElevatorAudio } from "../hooks/useElevatorAudio.ts";
 
 interface ElevatorSceneProps {
   onReachClubFloor: (floor: number) => void;
@@ -35,7 +35,41 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
   );
   const [isElevatorAnimating, setIsElevatorAnimating] = useState(false);
   const threeRef = useRef<ThreeElevatorSceneHandle>(null);
-  const { playElevatorSound, stopElevatorSound, setVolume, getVolume, audioState } = useElevatorAudio();
+  const { playElevatorSound, stopElevatorSound, setVolume, getVolume, audioState, getAudioState, handlePhaseTransition } = useElevatorAudio();
+  
+  // Real-time synchronization state
+  const [syncInfo, setSyncInfo] = useState({
+    currentKeyframe: 0,
+    currentPhase: 'idle' as 'closing' | 'closed' | 'opening' | 'idle',
+    phaseProgress: 0,
+    audioTime: 0
+  });
+
+  // Update synchronization info in real-time
+  useEffect(() => {
+    if (!isElevatorAnimating) return;
+
+    const syncInterval = setInterval(() => {
+      if (threeRef.current && isElevatorAnimating) {
+        const keyframe = threeRef.current.getCurrentKeyframe();
+        const phase = threeRef.current.getCurrentPhase();
+        const phaseProgress = threeRef.current.getPhaseProgress();
+        const audioInfo = getAudioState();
+
+        // Perfect synchronization: Handle phase transitions
+        handlePhaseTransition(keyframe);
+
+        setSyncInfo({
+          currentKeyframe: keyframe,
+          currentPhase: phase,
+          phaseProgress: phaseProgress,
+          audioTime: audioInfo.audioTime
+        });
+      }
+    }, 50); // Update 20 times per second for smooth progress
+
+    return () => clearInterval(syncInterval);
+  }, [isElevatorAnimating, getAudioState]);
 
   const goToFloor = (floor: number) => {
     if (isMoving || floor === currentFloor) return;
@@ -137,19 +171,74 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
             </div>
           </div>
           
-          {/* Audio status indicator */}
-          <div className="bg-black/70 backdrop-blur-sm rounded-lg p-2 border border-gray-600">
+                  {/* Audio status indicator */}
+        <div className="bg-black/70 backdrop-blur-sm rounded-lg p-2 border border-gray-600">
+          <div className="text-white text-xs text-center">
+            {audioState.isLoaded ? (
+              <div className="flex items-center justify-center gap-1">
+                <div className={`w-2 h-2 rounded-full ${audioState.isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+                {audioState.isPlaying ? 'Playing' : 'Ready'}
+              </div>
+            ) : (
+              <div className="text-gray-400">Loading...</div>
+            )}
+          </div>
+        </div>
+
+        {/* Real-time synchronization display */}
+        {isElevatorAnimating && (
+          <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-amber-500/50">
+            <div className="text-amber-400 text-xs mb-2 text-center font-semibold">Sync Status</div>
+            
+            {/* Phase indicator */}
+            <div className="text-white text-xs mb-2 text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <div className={`w-2 h-2 rounded-full ${
+                  syncInfo.currentPhase === 'closing' ? 'bg-blue-400' :
+                  syncInfo.currentPhase === 'closed' ? 'bg-yellow-400' :
+                  syncInfo.currentPhase === 'opening' ? 'bg-green-400' : 'bg-gray-400'
+                }`}></div>
+                <span className="capitalize">{syncInfo.currentPhase}</span>
+              </div>
+            </div>
+
+            {/* Keyframe progress */}
+            <div className="text-white text-xs mb-2 text-center">
+              <div className="mb-1">Frame: {syncInfo.currentKeyframe}/300</div>
+              <div className="w-full bg-gray-700 rounded-full h-1.5">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 via-yellow-500 to-green-500 h-1.5 rounded-full transition-all duration-100"
+                  style={{ width: `${(syncInfo.currentKeyframe / 300) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Phase progress bar */}
             <div className="text-white text-xs text-center">
-              {audioState.isLoaded ? (
-                <div className="flex items-center justify-center gap-1">
-                  <div className={`w-2 h-2 rounded-full ${audioState.isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
-                  {audioState.isPlaying ? 'Playing' : 'Ready'}
-                </div>
-              ) : (
-                <div className="text-gray-400">Loading...</div>
-              )}
+              <div className="mb-1">Phase: {Math.round(syncInfo.phaseProgress * 100)}%</div>
+              <div className="w-full bg-gray-700 rounded-full h-1">
+                <div 
+                  className={`h-1 rounded-full transition-all duration-100 ${
+                    syncInfo.currentPhase === 'closing' ? 'bg-blue-500' :
+                    syncInfo.currentPhase === 'closed' ? 'bg-yellow-500' :
+                    syncInfo.currentPhase === 'opening' ? 'bg-green-500' : 'bg-gray-500'
+                  }`}
+                  style={{ width: `${syncInfo.phaseProgress * 100}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Audio time */}
+            <div className="text-white text-xs mt-2 text-center">
+              Audio: {syncInfo.audioTime.toFixed(1)}s
+            </div>
+            
+            {/* Current audio file */}
+            <div className="text-white text-xs mt-1 text-center text-amber-400">
+              {getAudioState().currentAudioFile}
             </div>
           </div>
+        )}
         </div>
       </div>
       {/* Right: Club image */}

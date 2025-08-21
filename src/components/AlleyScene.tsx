@@ -38,7 +38,7 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   useEffect(() => {
     if (!isLoading && audioRef.current) {
       audioRef.current.currentTime = 0;
-      audioRef.current.volume = 0.4;
+      audioRef.current.volume = 0.2;
       audioRef.current.play().catch(() => {});
     }
   }, [isLoading]);
