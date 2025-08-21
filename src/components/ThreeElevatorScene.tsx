@@ -12,6 +12,8 @@ interface ThreeElevatorSceneProps {
 
 export interface ThreeElevatorSceneHandle {
   playElevatorSequence: () => void;
+  getAnimationDuration: () => number;
+  isAnimationRunning: () => boolean;
 }
 
 let cachedElevator: THREE.Group | null = null;
@@ -59,6 +61,18 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
         if (listeningActionRef.current) {
           listeningActionRef.current.reset().play();
         }
+      },
+      getAnimationDuration: () => {
+        if (elevatorActionRef.current) {
+          return elevatorActionRef.current.getClip().duration;
+        }
+        return 0;
+      },
+      isAnimationRunning: () => {
+        if (elevatorActionRef.current) {
+          return elevatorActionRef.current.isRunning();
+        }
+        return false;
       },
     }));
 
@@ -125,12 +139,11 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
                 map: oldMat.map || null,
                 roughness: 0.8,
                 metalness: 0.1,
-                skinning: oldMat.skinning || false,
                 transparent: oldMat.transparent || false,
                 opacity: oldMat.opacity !== undefined ? oldMat.opacity : 1,
               });
               if (oldMat.map) {
-                oldMat.map.encoding = THREE.sRGBEncoding;
+                oldMat.map.colorSpace = THREE.SRGBColorSpace;
                 oldMat.map.needsUpdate = true;
               }
               child.material = newMat;
@@ -138,7 +151,7 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
               child.material.roughness = 0.8;
               child.material.metalness = 0.1;
               if (child.material.map) {
-                child.material.map.encoding = THREE.sRGBEncoding;
+                child.material.map.colorSpace = THREE.SRGBColorSpace;
                 child.material.map.needsUpdate = true;
               }
             }
@@ -191,8 +204,7 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
       controls.enableZoom = false;
       controls.enableRotate = false;
 
-      renderer.physicallyCorrectLights = true;
-      renderer.outputEncoding = THREE.sRGBEncoding;
+
 
       // Mount renderer
       mountRef.current.innerHTML = "";

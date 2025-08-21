@@ -18,6 +18,13 @@ export const useAudio = () => {
     ambientSoundsRef.current = new Audio();
     elevatorSoundRef.current = new Audio();
 
+    // Load the actual elevator sound effect
+    if (elevatorSoundRef.current) {
+      elevatorSoundRef.current.src = '/sounds/elevator_ride.mp3';
+      elevatorSoundRef.current.preload = 'auto';
+      elevatorSoundRef.current.volume = 0.6;
+    }
+
     // For demo purposes, we'll use data URLs for simple tones
     // In production, you'd load actual audio files
     setAudioState(prev => ({ ...prev, isLoaded: true }));
@@ -26,6 +33,7 @@ export const useAudio = () => {
       [discoTrackRef, ambientSoundsRef, elevatorSoundRef].forEach(ref => {
         if (ref.current) {
           ref.current.pause();
+          ref.current.currentTime = 0;
           ref.current = null;
         }
       });
@@ -51,8 +59,16 @@ export const useAudio = () => {
 
   const playElevatorSound = () => {
     if (elevatorSoundRef.current) {
-      elevatorSoundRef.current.volume = 0.5;
+      elevatorSoundRef.current.volume = 0.6;
+      elevatorSoundRef.current.currentTime = 0;
       elevatorSoundRef.current.play().catch(console.log);
+    }
+  };
+
+  const stopElevatorSound = () => {
+    if (elevatorSoundRef.current) {
+      elevatorSoundRef.current.pause();
+      elevatorSoundRef.current.currentTime = 0;
     }
   };
 
@@ -76,6 +92,7 @@ export const useAudio = () => {
     playDiscoTrack,
     playAmbientSounds,
     playElevatorSound,
+    stopElevatorSound,
     stopAllSounds,
     playDJVoiceOver
   };

@@ -36,7 +36,6 @@ function AppRoutes() {
   const handleEnterBuilding = () => {
     setIsLoading(true);
     setLoadingMessage('Calling the elevator...');
-    playElevatorSound();
     setTimeout(() => {
       setIsLoading(false);
       setLoadingMessage(undefined);

@@ -1,8 +1,9 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import ThreeElevatorScene, {
   ThreeElevatorSceneHandle,
 } from "./ThreeElevatorScene";
 import { LoadingScreen } from "./LoadingScreen";
+import { useElevatorAudio } from "../hooks/useElevatorAudio";
 
 interface ElevatorSceneProps {
   onReachClubFloor: (floor: number) => void;
@@ -22,8 +23,6 @@ const FLOOR_LABELS = [
   "4th floor - Late Night Agenda",
 ];
 
-const ELEVATOR_ANIMATION_DURATION = 8000;
-
 export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
   onReachClubFloor,
 }) => {
@@ -34,7 +33,9 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
   const [selectedClubImage, setSelectedClubImage] = useState<string | null>(
     null
   );
+  const [isElevatorAnimating, setIsElevatorAnimating] = useState(false);
   const threeRef = useRef<ThreeElevatorSceneHandle>(null);
+  const { playElevatorSound, stopElevatorSound, setVolume, getVolume, audioState } = useElevatorAudio();
 
   const goToFloor = (floor: number) => {
     if (isMoving || floor === currentFloor) return;
@@ -46,14 +47,42 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
   };
 
   const handleClubClick = () => {
+    if (isElevatorAnimating) return; // Prevent multiple clicks during animation
+    
     setSelectedClubImage(
       FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length]
     );
+    setIsElevatorAnimating(true);
+    
+    // Get the actual animation duration from the 3D scene
+    const animationDuration = threeRef.current?.getAnimationDuration() || 8;
+    
+    // Start the elevator sound effect with perfect synchronization
+    playElevatorSound(animationDuration);
+    
+    // Start the 3D animation
     threeRef.current?.playElevatorSequence();
+    
+    // Set up the completion handler based on actual animation duration
     setTimeout(() => {
+      // Complete the scene transition
       onReachClubFloor(currentFloor);
-    }, ELEVATOR_ANIMATION_DURATION);
+    }, animationDuration * 1000); // Convert to milliseconds
   };
+
+  // Handle animation completion from 3D scene
+  const handleElevatorSequenceEnd = () => {
+    setIsElevatorAnimating(false);
+    stopElevatorSound();
+    onReachClubFloor(currentFloor);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopElevatorSound();
+    };
+  }, [stopElevatorSound]);
 
   return (
     <div className="flex flex-col lg:flex-row w-full h-screen bg-black">
@@ -65,6 +94,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
           ref={threeRef}
           floor={currentFloor}
           onLoaded={() => setIsElevatorLoading(false)}
+          onElevatorSequenceEnd={handleElevatorSequenceEnd}
         />
         {/* Overlay floor buttons at right-bottom */}
         <div className="absolute flex flex-col gap-2 z-10 right-4 bottom-4">
@@ -72,24 +102,62 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
             <button
               key={floor}
               onClick={() => goToFloor(floor)}
-              disabled={isMoving}
+              disabled={isMoving || isElevatorAnimating}
               className={`w-14 h-10 rounded-lg border text-base font-medium transition-all duration-300 shadow-lg ${
                 floor === currentFloor
                   ? "bg-amber-500 border-amber-400 text-black"
                   : "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-gray-500"
               } ${
-                isMoving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                isMoving || isElevatorAnimating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
               }`}
             >
               {floor}
             </button>
           ))}
         </div>
+        
+        {/* Volume control overlay at left-bottom */}
+        <div className="absolute flex flex-col gap-2 z-10 left-4 bottom-4">
+          <div className="bg-black/70 backdrop-blur-sm rounded-lg p-3 border border-gray-600">
+            <div className="text-white text-xs mb-2 text-center">Volume</div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={getVolume()}
+              onChange={(e) => setVolume(parseFloat(e.target.value))}
+              className="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+              style={{
+                background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${getVolume() * 100}%, #4b5563 ${getVolume() * 100}%, #4b5563 100%)`
+              }}
+            />
+            <div className="text-white text-xs mt-1 text-center">
+              {Math.round(getVolume() * 100)}%
+            </div>
+          </div>
+          
+          {/* Audio status indicator */}
+          <div className="bg-black/70 backdrop-blur-sm rounded-lg p-2 border border-gray-600">
+            <div className="text-white text-xs text-center">
+              {audioState.isLoaded ? (
+                <div className="flex items-center justify-center gap-1">
+                  <div className={`w-2 h-2 rounded-full ${audioState.isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+                  {audioState.isPlaying ? 'Playing' : 'Ready'}
+                </div>
+              ) : (
+                <div className="text-gray-400">Loading...</div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
       {/* Right: Club image */}
       <div className="w-full lg:w-3/5 flex flex-col items-center justify-center bg-gradient-to-b from-amber-900/20 to-black h-full px-2 py-4">
         <div
-          className="h-56 sm:h-72 md:h-96 lg:h-[70%] mt-6 rounded-xl overflow-hidden shadow-lg mb-8 border-4 border-amber-700/30 flex items-center justify-center relative group"
+          className={`h-56 sm:h-72 md:h-96 lg:h-[70%] mt-6 rounded-xl overflow-hidden shadow-lg mb-8 border-4 border-amber-700/30 flex items-center justify-center relative group ${
+            isElevatorAnimating ? 'animate-pulse' : ''
+          }`}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
         >
@@ -98,28 +166,29 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
               selectedClubImage ||
               FLOOR_IMAGES[(currentFloor - 1) % FLOOR_IMAGES.length]
             }
-            alt={FLOOR_LABELS[(currentFloor - 1) % FLOOR_LABELS.length]}
+            alt={FLOOR_LABELS[(currentFloor - 1) % FLOOR_IMAGES.length]}
             className="object-cover w-full h-full cursor-pointer transition-transform duration-300 group-hover:scale-105"
             onClick={handleClubClick}
           />
           <button
             onClick={handleClubClick}
+            disabled={isElevatorAnimating}
             className={`absolute inset-0 flex items-center justify-center bg-black/60 text-white text-5xl font-bold transition-all duration-300
               ${
-                hovered
+                hovered && !isElevatorAnimating
                   ? "opacity-100 scale-100"
                   : "opacity-0 scale-95 pointer-events-none"
               }`}
-            style={{ pointerEvents: hovered ? "auto" : "none" }}
+            style={{ pointerEvents: hovered && !isElevatorAnimating ? "auto" : "none" }}
           >
-            Go!
+            {isElevatorAnimating ? "Going..." : "Go!"}
           </button>
         </div>
         <div className="text-lg text-white mb-2 text-center">
-          Click image to Go
+          {isElevatorAnimating ? "Elevator in motion..." : "Click image to Go"}
         </div>
         <div className="text-xl lg:text-2xl text-amber-400 font-bold mb-4 text-center">
-          {FLOOR_LABELS[(currentFloor - 1) % FLOOR_LABELS.length]}
+          {FLOOR_LABELS[(currentFloor - 1) % FLOOR_IMAGES.length]}
         </div>
       </div>
     </div>
