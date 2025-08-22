@@ -11,8 +11,15 @@ import SignOutPage from './components/SignOutPage';
 
 function MainPage() {
   const navigate = useNavigate();
+  
+  const handleEnterGuestMode = () => {
+    // Stop any background music when leaving the landing page
+    // The useBackgroundMusic hook will handle cleanup automatically
+    navigate('/alley');
+  };
+  
   return (
-    <ImageBasedLanding onEnterGuestMode={() => navigate('/alley')} />
+    <ImageBasedLanding onEnterGuestMode={handleEnterGuestMode} />
   );
 }
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useBackgroundMusic } from '../hooks/useBackgroundMusic';
 
 interface ImageBasedLandingProps {
 	onEnterGuestMode: () => void;
@@ -30,9 +31,21 @@ interface GlitterParticle {
 }
 
 export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGuestMode }) => {
+	// Background music hook
+	const { 
+		playBackgroundMusic, 
+		stopBackgroundMusic, 
+		pauseBackgroundMusic, 
+		resumeBackgroundMusic,
+		setVolume, 
+		getVolume, 
+		audioState 
+	} = useBackgroundMusic('/sounds/groove.mp3');
+	
 	const [sparkles, setSparkles] = useState<Sparkle[]>([]);
 	const [glitterParticles, setGlitterParticles] = useState<GlitterParticle[]>([]);
 	const [isMobile, setIsMobile] = useState(false);
+	const [showMusicControls, setShowMusicControls] = useState(false);
 	const animationFrameRef = useRef<number>();
 	const lastTimeRef = useRef(0);
 
@@ -85,6 +98,16 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 		}
 		setGlitterParticles(newParticles);
 	}, [isMobile]);
+
+	// Start background music when component mounts
+	useEffect(() => {
+		playBackgroundMusic();
+		
+		// Cleanup: stop music when component unmounts
+		return () => {
+			stopBackgroundMusic();
+		};
+	}, [playBackgroundMusic, stopBackgroundMusic]);
 
 	useEffect(() => {
 		generateSparkles();
@@ -207,6 +230,62 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 			{/* Centered 16:9 image container */}
 			<div className="relative z-10 w-screen md:w-[90vw] lg:w-[80vw] max-w-[1400px] mx-auto aspect-[16/9]">
 				<img src="/imgs/landing.png" alt="Nightclub Landing" className="absolute inset-0 w-full h-full object-contain" />
+			</div>
+
+			{/* Music Controls */}
+			<div className="absolute top-4 right-4 z-30">
+				<div className="bg-black/70 backdrop-blur-sm rounded-lg p-3 border border-gray-600">
+					<div className="text-white text-xs mb-2 text-center">Music</div>
+					
+					{/* Play/Pause Button */}
+					<button
+						onClick={(e) => {
+							e.stopPropagation();
+							if (audioState.isPlaying) {
+								pauseBackgroundMusic();
+							} else {
+								resumeBackgroundMusic();
+							}
+						}}
+						className="w-8 h-8 bg-amber-500 hover:bg-amber-600 rounded-full flex items-center justify-center text-black text-sm font-bold transition-colors duration-200 mb-2"
+					>
+						{audioState.isPlaying ? '⏸️' : '▶️'}
+					</button>
+					
+					{/* Volume Control */}
+					<div className="text-white text-xs mb-1 text-center">Volume</div>
+					<input
+						type="range"
+						min="0"
+						max="1"
+						step="0.1"
+						value={getVolume()}
+						onChange={(e) => {
+							e.stopPropagation();
+							setVolume(parseFloat(e.target.value));
+						}}
+						onClick={(e) => e.stopPropagation()}
+						className="w-16 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+						style={{
+							background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${getVolume() * 100}%, #4b5563 ${getVolume() * 100}%, #4b5563 100%)`
+						}}
+					/>
+					<div className="text-white text-xs mt-1 text-center">
+						{Math.round(getVolume() * 100)}%
+					</div>
+					
+					{/* Music Status */}
+					<div className="text-white text-xs mt-2 text-center">
+						{audioState.isLoaded ? (
+							<div className="flex items-center justify-center gap-1">
+								<div className={`w-2 h-2 rounded-full ${audioState.isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+								{audioState.isPlaying ? 'Playing' : 'Paused'}
+							</div>
+						) : (
+							<div className="text-gray-400">Loading...</div>
+						)}
+					</div>
+				</div>
 			</div>
 
 			{/* Guide */}
