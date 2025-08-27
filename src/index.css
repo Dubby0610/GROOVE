@@ -99,11 +99,131 @@
     }
     50% { 
       opacity: 0.8;
-      transform: scale(1.2) rotate(180deg);
+      transform: scale(1.05) rotate(180deg);
     }
     75% { 
-      opacity: 0.6;
+      opacity: 1;
       transform: scale(1.1) rotate(270deg);
+    }
+  }
+  
+  .animate-sound-bar-up {
+    animation: soundBarUp 0.8s ease-in-out infinite;
+  }
+  
+  @keyframes soundBarUp {
+    0% {
+      height: 10px;
+      opacity: 0.6;
+    }
+    50% {
+      height: 50px;
+      opacity: 1;
+    }
+    100% {
+      height: 10px;
+      opacity: 0.6;
+    }
+  }
+  
+  .animate-sound-bar-grow-up {
+    animation: soundBarGrowUp 0.8s ease-in-out infinite;
+    transform-origin: bottom center;
+    position: relative;
+  }
+  
+  @keyframes soundBarGrowUp {
+    0% {
+      height: 10px;
+      opacity: 0.6;
+    }
+    50% {
+      height: 50px;
+      opacity: 1;
+    }
+    100% {
+      height: 10px;
+      opacity: 0.6;
+    }
+  }
+  
+  .animate-sound-bar-upward {
+    animation: soundBarUpward 0.8s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  
+  @keyframes soundBarUpward {
+    0% {
+      transform: scaleY(0.2);
+      opacity: 0.6;
+    }
+    50% {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scaleY(0.2);
+      opacity: 0.6;
+    }
+  }
+  
+  .animate-sound-bar-grow-from-bottom {
+    animation: soundBarGrowFromBottom 0.8s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  
+  @keyframes soundBarGrowFromBottom {
+    0% {
+      height: 10px;
+      opacity: 0.6;
+    }
+    50% {
+      height: 50px;
+      opacity: 1;
+    }
+    100% {
+      height: 10px;
+      opacity: 0.6;
+    }
+  }
+  
+  .animate-sound-bar-bottom-fixed {
+    animation: soundBarBottomFixed 0.8s ease-in-out infinite;
+    position: relative;
+  }
+  
+  @keyframes soundBarBottomFixed {
+    0% {
+      height: 10px;
+      opacity: 0.6;
+    }
+    50% {
+      height: 50px;
+      opacity: 1;
+    }
+    100% {
+      height: 10px;
+      opacity: 0.6;
+    }
+  }
+  
+  .animate-sound-bar-scale-up {
+    animation: soundBarScaleUp 0.8s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  
+  @keyframes soundBarScaleUp {
+    0% {
+      transform: scaleY(0.2);
+      opacity: 0.6;
+    }
+    50% {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scaleY(0.2);
+      opacity: 0.6;
     }
   }
   

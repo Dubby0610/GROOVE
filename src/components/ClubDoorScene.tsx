@@ -231,29 +231,31 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
       </div>
 
       {/* Sound visualization bars */}
-      <div className="absolute bottom-20 left-8 flex space-x-1">
+      <div className="absolute bottom-20 left-8 flex space-x-1 items-end">
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="w-4 bg-gradient-to-t from-purple-500 to-pink-500 animate-pulse"
+            className="w-4 bg-gradient-to-t from-purple-500 to-pink-500"
             style={{
               height: `${Math.random() * 40 + 10}px`,
               animationDelay: `${i * 0.1}s`,
-              animationDuration: `${0.3 + Math.random() * 0.3}s`,
+              animationDuration: `${0.8 + Math.random() * 0.6}s`,
+              animation: `soundBarGrowUp ${0.8 + Math.random() * 0.6}s ease-in-out infinite`,
             }}
           />
         ))}
       </div>
 
-      <div className="absolute bottom-20 right-8 flex space-x-1">
-        {[...Array(6)].map((_, i) => (
+      <div className="absolute bottom-20 right-8 flex space-x-1 items-end">
+        {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="w-4 bg-gradient-to-t from-cyan-500 to-blue-500 animate-pulse"
+            className="w-4 bg-gradient-to-t from-cyan-500 to-blue-500"
             style={{
               height: `${Math.random() * 30 + 15}px`,
               animationDelay: `${i * 0.15}s`,
-              animationDuration: `${0.4 + Math.random() * 0.4}s`,
+              animationDuration: `${0.8 + Math.random() * 0.6}s`,
+              animation: `soundBarGrowUp ${0.8 + Math.random() * 0.6}s ease-in-out infinite`,
             }}
           />
         ))}
