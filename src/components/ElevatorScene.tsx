@@ -185,60 +185,58 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
           </div>
         </div>
 
-        {/* Real-time synchronization display */}
-        {isElevatorAnimating && (
-          <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-amber-500/50">
-            <div className="text-amber-400 text-xs mb-2 text-center font-semibold">Sync Status</div>
+        {/* Nightclub Music Controller */}
+        <div className="absolute top-4 right-4 z-30">
+          <div className="bg-black/80 backdrop-blur-md rounded-xl p-2 border border-purple-500/50 shadow-2xl">
+            <div className="text-purple-300 text-xs font-semibold mb-1 text-center tracking-wider">🎵</div>
             
-            {/* Phase indicator */}
-            <div className="text-white text-xs mb-2 text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <div className={`w-2 h-2 rounded-full ${
-                  syncInfo.currentPhase === 'closing' ? 'bg-blue-400' :
-                  syncInfo.currentPhase === 'closed' ? 'bg-yellow-400' :
-                  syncInfo.currentPhase === 'opening' ? 'bg-green-400' : 'bg-gray-400'
-                }`}></div>
-                <span className="capitalize">{syncInfo.currentPhase}</span>
-              </div>
-            </div>
-
-            {/* Keyframe progress */}
-            <div className="text-white text-xs mb-2 text-center">
-              <div className="mb-1">Frame: {syncInfo.currentKeyframe}/300</div>
-              <div className="w-full bg-gray-700 rounded-full h-1.5">
-                <div 
-                  className="bg-gradient-to-r from-blue-500 via-yellow-500 to-green-500 h-1.5 rounded-full transition-all duration-100"
-                  style={{ width: `${(syncInfo.currentKeyframe / 300) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Phase progress bar */}
-            <div className="text-white text-xs text-center">
-              <div className="mb-1">Phase: {Math.round(syncInfo.phaseProgress * 100)}%</div>
-              <div className="w-full bg-gray-700 rounded-full h-1">
-                <div 
-                  className={`h-1 rounded-full transition-all duration-100 ${
-                    syncInfo.currentPhase === 'closing' ? 'bg-blue-500' :
-                    syncInfo.currentPhase === 'closed' ? 'bg-yellow-500' :
-                    syncInfo.currentPhase === 'opening' ? 'bg-green-500' : 'bg-gray-500'
-                  }`}
-                  style={{ width: `${syncInfo.phaseProgress * 100}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Audio time */}
-            <div className="text-white text-xs mt-2 text-center">
-              Audio: {syncInfo.audioTime.toFixed(1)}s
+            {/* Play/Pause Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (audioState.isPlaying) {
+                  stopElevatorSound();
+                } else {
+                  playElevatorSound(8.0);
+                }
+              }}
+              className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-all duration-200 mb-1 shadow-lg hover:shadow-purple-500/50 mx-auto"
+            >
+              {audioState.isPlaying ? '⏸️' : '▶️'}
+            </button>
+            
+            {/* Volume Control */}
+            <div className="text-purple-300 text-xs mb-1 text-center">Vol</div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={getVolume()}
+              onChange={(e) => {
+                e.stopPropagation();
+                setVolume(parseFloat(e.target.value));
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-12 h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer slider"
+              style={{
+                background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${getVolume() * 100}%, #374151 ${getVolume() * 100}%, #374151 100%)`
+              }}
+            />
+            <div className="text-purple-300 text-xs text-center">
+              {Math.round(getVolume() * 100)}%
             </div>
             
-            {/* Current audio file */}
-            <div className="text-white text-xs mt-1 text-center text-amber-400">
-              {getAudioState().currentAudioFile}
+            {/* Music Status */}
+            <div className="text-center mt-1">
+              {audioState.isLoaded ? (
+                <div className={`w-1.5 h-1.5 rounded-full mx-auto ${audioState.isPlaying ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50' : 'bg-purple-400'}`}></div>
+              ) : (
+                <div className="w-1.5 h-1.5 rounded-full mx-auto bg-gray-400"></div>
+              )}
             </div>
           </div>
-        )}
+        </div>
         </div>
       </div>
       {/* Right: Club image */}

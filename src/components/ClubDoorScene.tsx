@@ -58,6 +58,8 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
   const [user, setUser] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [checkingSub, setCheckingSub] = useState(false);
+  const [justPaid, setJustPaid] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     // Simulate music-driven lighting pulse
@@ -140,6 +142,78 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
     onEnterClub();
   };
 
+  // Handle user sign out
+  const handleSignOut = async () => {
+    // Prevent signout during critical operations
+    if (checkingSub || showPaymentModal || showEntryModal) {
+      alert("Please wait for the current operation to complete before signing out.");
+      return;
+    }
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      "Are you sure you want to sign out? This will end your current session and you'll need to log in again."
+    );
+    
+    if (!confirmed) return;
+    
+    setIsSigningOut(true);
+    
+    try {
+      // If there's an active access token, try to invalidate it on the backend
+      const accessToken = localStorage.getItem("accessToken");
+      const refreshToken = localStorage.getItem("refreshToken");
+      
+      if (accessToken || refreshToken) {
+        try {
+          await apiFetch("/auth/logout", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ 
+              token: accessToken,
+              refreshToken: refreshToken 
+            })
+          });
+        } catch (error) {
+          console.warn("Failed to invalidate token on backend:", error);
+          // Continue with logout even if backend call fails
+        }
+      }
+      
+      // Clear all local storage
+      localStorage.clear();
+      
+      // Clear all session storage
+      sessionStorage.clear();
+      
+      // Reset all component state
+      setIsAuthenticated(false);
+      setUser(null);
+      setSubscription(null);
+      setAuthModalOpen(false);
+      setShowPaymentModal(false);
+      setShowEntryModal(false);
+      setShowWelcomeMessage(false);
+      setCheckingSub(false);
+      setJustPaid(false);
+      setEntryPeriod(null);
+      setDjHovered(false);
+      
+      // Redirect to first page (landing page)
+      window.location.href = "/";
+      
+    } catch (error) {
+      console.error("Error during sign out:", error);
+      setIsSigningOut(false);
+      // Force logout even if there's an error
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = "/";
+    }
+  };
+
   // Extract just the floor name (after the dash)
   const clubTitle = clubLabel.split("-").slice(1).join("-").trim();
 
@@ -152,6 +226,40 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
       return;
     }
 
+    // If user just paid, don't show payment modal again
+    if (justPaid) {
+      console.log("User just paid, waiting for subscription to be processed");
+      return;
+    }
+
+    // If we already have a valid subscription, use it instead of fetching again
+    if (subscription && subscription.status === "active") {
+      // Check if subscription is still valid
+      if (subscription.plan === "onehour") {
+        if (subscription.remaining_time_seconds > 0) {
+          setEntryPeriod({
+            start: subscription.start_date || new Date().toISOString(),
+            end: subscription.end_date,
+          });
+          setShowEntryModal(true);
+          return;
+        }
+      } else {
+        // For other plans (oneday), check end date
+        const now = new Date();
+        const end = new Date(subscription.end_date);
+        if (end > now) {
+          setEntryPeriod({
+            start: subscription.start_date || new Date().toISOString(),
+            end: subscription.end_date,
+          });
+          setShowEntryModal(true);
+          return;
+        }
+      }
+    }
+
+    // Only fetch fresh data if we don't have a valid subscription
     setCheckingSub(true);
     apiFetch("/user/subscription", {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -194,8 +302,14 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
       })
       .catch(() => {
         setCheckingSub(false);
-        // Error fetching subscription - show payment modal
-        setShowPaymentModal(true);
+        // Only show payment modal if we don't have any existing subscription data
+        if (!subscription) {
+          setShowPaymentModal(true);
+        } else {
+          // If we have existing subscription data but API call failed, 
+          // don't show payment modal - user might still have access
+          console.warn("Failed to refresh subscription, using cached data");
+        }
       });
   };
 
@@ -342,9 +456,53 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
         <div className="text-white text-2xl font-bold">247</div>
       </div>
 
+      {/* Sign Out Button */}
+      {isAuthenticated && (
+        <div className="absolute top-6 right-6">
+          <button
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-2xl hover:shadow-3xl flex items-center space-x-3 border-2 ${
+              isSigningOut 
+                ? "bg-gray-500 border-gray-400 cursor-not-allowed opacity-75" 
+                : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-purple-400 hover:border-purple-300 cursor-pointer transform hover:scale-105 active:scale-95"
+            }`}
+          >
+            <span className="text-lg">{isSigningOut ? "⏳" : "🚪"}</span>
+            <span className="text-white font-medium">{isSigningOut ? "Signing Out..." : "Sign Out"}</span>
+          </button>
+        </div>
+      )}
+
       <PaymentModal
         open={showPaymentModal}
-        onOpenChange={setShowPaymentModal}
+        onOpenChange={(open) => {
+          setShowPaymentModal(open);
+          // If payment modal is closing, refresh subscription data
+          if (!open && isAuthenticated) {
+            setJustPaid(true); // Mark that user just paid
+            const accessToken = localStorage.getItem("accessToken");
+            if (accessToken) {
+              setCheckingSub(true);
+              apiFetch("/user/subscription", {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              })
+                .then((res: any) => res.json())
+                .then((data: any) => {
+                  setSubscription(data);
+                  setCheckingSub(false);
+                  setShowWelcomeMessage(true);
+                  // Reset the justPaid flag after a delay
+                  setTimeout(() => setJustPaid(false), 5000);
+                })
+                .catch(() => {
+                  setCheckingSub(false);
+                  // Keep existing subscription data if refresh fails
+                  setTimeout(() => setJustPaid(false), 5000);
+                });
+            }
+          }
+        }}
         subscription={subscription}
       />
 

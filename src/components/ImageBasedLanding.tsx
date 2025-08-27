@@ -234,8 +234,8 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 
 			{/* Music Controls */}
 			<div className="absolute top-4 right-4 z-30">
-				<div className="bg-black/70 backdrop-blur-sm rounded-lg p-3 border border-gray-600">
-					<div className="text-white text-xs mb-2 text-center">Music</div>
+				<div className="bg-black/80 backdrop-blur-md rounded-xl p-2 border border-purple-500/50 shadow-2xl">
+					<div className="text-purple-300 text-xs font-semibold mb-1 text-center tracking-wider">🎵</div>
 					
 					{/* Play/Pause Button */}
 					<button
@@ -247,13 +247,13 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 								resumeBackgroundMusic();
 							}
 						}}
-						className="w-8 h-8 bg-amber-500 hover:bg-amber-600 rounded-full flex items-center justify-center text-black text-sm font-bold transition-colors duration-200 mb-2"
+						className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-all duration-200 mb-1 shadow-lg hover:shadow-purple-500/50 mx-auto"
 					>
 						{audioState.isPlaying ? '⏸️' : '▶️'}
 					</button>
 					
 					{/* Volume Control */}
-					<div className="text-white text-xs mb-1 text-center">Volume</div>
+					<div className="text-purple-300 text-xs mb-1 text-center">Vol</div>
 					<input
 						type="range"
 						min="0"
@@ -265,24 +265,21 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 							setVolume(parseFloat(e.target.value));
 						}}
 						onClick={(e) => e.stopPropagation()}
-						className="w-16 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+						className="w-12 h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer slider"
 						style={{
-							background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${getVolume() * 100}%, #4b5563 ${getVolume() * 100}%, #4b5563 100%)`
+							background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${getVolume() * 100}%, #374151 ${getVolume() * 100}%, #374151 100%)`
 						}}
 					/>
-					<div className="text-white text-xs mt-1 text-center">
+					<div className="text-purple-300 text-xs text-center">
 						{Math.round(getVolume() * 100)}%
 					</div>
 					
 					{/* Music Status */}
-					<div className="text-white text-xs mt-2 text-center">
+					<div className="text-center mt-1">
 						{audioState.isLoaded ? (
-							<div className="flex items-center justify-center gap-1">
-								<div className={`w-2 h-2 rounded-full ${audioState.isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
-								{audioState.isPlaying ? 'Playing' : 'Paused'}
-							</div>
+							<div className={`w-1.5 h-1.5 rounded-full mx-auto ${audioState.isPlaying ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50' : 'bg-purple-400'}`}></div>
 						) : (
-							<div className="text-gray-400">Loading...</div>
+							<div className="w-1.5 h-1.5 rounded-full mx-auto bg-gray-400"></div>
 						)}
 					</div>
 				</div>
