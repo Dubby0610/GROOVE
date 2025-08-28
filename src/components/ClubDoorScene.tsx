@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import PaymentModal from "./PaymentModal";
 import { AuthModal } from "./AuthModal";
 import LoginModal from "./LoginModal";
@@ -61,6 +61,10 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
   const [justPaid, setJustPaid] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
+  // Audio refs for background music
+  const welcomeMusicRef = useRef<HTMLAudioElement | null>(null);
+  const paymentMusicRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
     // Simulate music-driven lighting pulse
     const interval = setInterval(() => {
@@ -78,6 +82,27 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
       clearTimeout(voiceOverTimer);
     };
   }, [playDJVoiceOver, clubFloor]);
+
+  // Initialize and manage background music
+  useEffect(() => {
+    // Start welcome music when component mounts
+    if (welcomeMusicRef.current) {
+      welcomeMusicRef.current.volume = 0.3;
+      welcomeMusicRef.current.play().catch(console.error);
+    }
+
+    return () => {
+      // Cleanup audio on unmount
+      if (welcomeMusicRef.current) {
+        welcomeMusicRef.current.pause();
+        welcomeMusicRef.current.currentTime = 0;
+      }
+      if (paymentMusicRef.current) {
+        paymentMusicRef.current.pause();
+        paymentMusicRef.current.currentTime = 0;
+      }
+    };
+  }, []);
 
   // Check auth on mount
   useEffect(() => {
@@ -323,6 +348,19 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
         backgroundRepeat: "no-repeat",
       }}
     >
+      {/* Background music elements */}
+      <audio
+        ref={welcomeMusicRef}
+        src="/sounds/welcome..._ page_groove.mp3"
+        loop
+        style={{ display: 'none' }}
+      />
+      <audio
+        ref={paymentMusicRef}
+        src="/sounds/Payment_details_groove.mp3"
+        loop
+        style={{ display: 'none' }}
+      />
       <AuthModal
         open={authModalOpen}
         onOpenChange={setAuthModalOpen}
@@ -478,6 +516,33 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
         open={showPaymentModal}
         onOpenChange={(open) => {
           setShowPaymentModal(open);
+          
+          // Handle music transitions
+          if (open) {
+            // Payment modal opening: fade out welcome music, fade in payment music
+            if (welcomeMusicRef.current) {
+              welcomeMusicRef.current.volume = 0.1; // Lower volume
+            }
+            if (paymentMusicRef.current) {
+              paymentMusicRef.current.volume = 0.3; // Normal volume
+              paymentMusicRef.current.play().catch(console.error);
+            }
+          } else {
+            // Payment modal closing: fade out payment music, fade in welcome music
+            if (paymentMusicRef.current) {
+              paymentMusicRef.current.volume = 0.0; // Fade out
+              setTimeout(() => {
+                if (paymentMusicRef.current) {
+                  paymentMusicRef.current.pause();
+                  paymentMusicRef.current.currentTime = 0;
+                }
+              }, 1000);
+            }
+            if (welcomeMusicRef.current) {
+              welcomeMusicRef.current.volume = 0.3; // Restore normal volume
+            }
+          }
+          
           // If payment modal is closing, refresh subscription data
           if (!open && isAuthenticated) {
             setJustPaid(true); // Mark that user just paid

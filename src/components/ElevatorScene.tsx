@@ -150,40 +150,9 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
           ))}
         </div>
         
-        {/* Volume control overlay at left-bottom */}
-        <div className="absolute flex flex-col gap-2 z-10 left-4 bottom-4">
-          <div className="bg-black/70 backdrop-blur-sm rounded-lg p-3 border border-gray-600">
-            <div className="text-white text-xs mb-2 text-center">Volume</div>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={getVolume()}
-              onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
-              style={{
-                background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${getVolume() * 100}%, #4b5563 ${getVolume() * 100}%, #4b5563 100%)`
-              }}
-            />
-            <div className="text-white text-xs mt-1 text-center">
-              {Math.round(getVolume() * 100)}%
-            </div>
-          </div>
+
           
-                  {/* Audio status indicator */}
-        <div className="bg-black/70 backdrop-blur-sm rounded-lg p-2 border border-gray-600">
-          <div className="text-white text-xs text-center">
-            {audioState.isLoaded ? (
-              <div className="flex items-center justify-center gap-1">
-                <div className={`w-2 h-2 rounded-full ${audioState.isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
-                {audioState.isPlaying ? 'Playing' : 'Ready'}
-              </div>
-            ) : (
-              <div className="text-gray-400">Loading...</div>
-            )}
-          </div>
-        </div>
+
 
         {/* Nightclub Music Controller */}
         <div className="absolute top-4 right-4 z-30">
@@ -236,7 +205,6 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
               )}
             </div>
           </div>
-        </div>
         </div>
       </div>
       {/* Right: Club image */}

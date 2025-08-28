@@ -98,6 +98,7 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
+      // Always clean up audio analysis on unmount
       stopAudioAnalysis();
     };
   }, [audioFile]);
@@ -105,6 +106,9 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
   // Audio analysis setup
   const startAudioAnalysis = useCallback(() => {
     if (!audioRef.current || !audioRef.current.src) return;
+    
+    // Prevent multiple instances
+    if (audioContextRef.current && audioContextRef.current.state === 'running') return;
 
     try {
       // Create audio context
@@ -120,9 +124,35 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
       sourceRef.current.connect(analyserRef.current);
       analyserRef.current.connect(audioContextRef.current.destination);
 
-      // Start animation loop
-      animateAudioLevels();
+      // Resume audio context if suspended (needed for some browsers)
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+
+      // Start animation loop with a small delay to ensure smooth restart
+      setTimeout(() => {
+        animateAudioLevels();
+      }, 50);
     } catch (error) {
+      // If the error is about the audio element already being connected,
+      // we need to create a new audio element
+      if (error.message.includes('already connected')) {
+        console.log('Audio element already connected, creating new audio element');
+        // Create a new audio element with the same source
+        const newAudio = new Audio(audioRef.current!.src);
+        newAudio.loop = true;
+        newAudio.volume = audioRef.current!.volume;
+        newAudio.currentTime = audioRef.current!.currentTime;
+        
+        // Replace the old audio element
+        audioRef.current = newAudio;
+        
+        // Try to start analysis again with the new audio element
+        setTimeout(() => {
+          startAudioAnalysis();
+        }, 100);
+        return;
+      }
       console.error('Failed to start audio analysis:', error);
     }
   }, []);
@@ -148,7 +178,19 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
   }, []);
 
   const animateAudioLevels = useCallback(() => {
-    if (!analyserRef.current || !isPlayingRef.current) return;
+    if (!analyserRef.current) return;
+    
+    // Always continue the animation loop, even when paused
+    // This ensures the visualizer can restart immediately when music resumes
+    if (!isPlayingRef.current) {
+      // Reset levels to zero when not playing
+      setAudioLevels(new Array(9).fill(0));
+      setBarVelocities(new Array(9).fill(0));
+      setBarTargets(new Array(9).fill(0));
+      // Continue the animation loop even when paused
+      animationFrameRef.current = requestAnimationFrame(animateAudioLevels);
+      return;
+    }
 
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
     analyserRef.current.getByteFrequencyData(dataArray);
@@ -258,6 +300,7 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
     setAudioLevels(newLevels);
     setBarVelocities(newVelocities);
     
+    // Always continue the animation loop to allow restarting
     animationFrameRef.current = requestAnimationFrame(animateAudioLevels);
   }, [audioLevels, barVelocities]);
 
@@ -274,12 +317,16 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
     audioRef.current.play().then(() => {
       setAudioState(prev => ({ ...prev, isPlaying: true }));
       isPlayingRef.current = true;
+      // Only start audio analysis if it's not already running
+      if (!audioContextRef.current) {
+        startAudioAnalysis();
+      }
     }).catch((error) => {
       console.error('Failed to play dance music:', error);
       setAudioState(prev => ({ ...prev, isPlaying: false }));
       isPlayingRef.current = false;
     });
-  }, [audioState.volume]);
+  }, [audioState.volume, startAudioAnalysis]);
 
   const stopDanceMusic = useCallback(() => {
     if (!audioRef.current) return;
@@ -288,6 +335,7 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
     audioRef.current.currentTime = 0;
     setAudioState(prev => ({ ...prev, isPlaying: false }));
     isPlayingRef.current = false;
+    // Only stop audio analysis when completely stopping, not when pausing
     stopAudioAnalysis();
   }, [stopAudioAnalysis]);
 
@@ -297,8 +345,9 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
     audioRef.current.pause();
     setAudioState(prev => ({ ...prev, isPlaying: false }));
     isPlayingRef.current = false;
-    stopAudioAnalysis();
-  }, [stopAudioAnalysis]);
+    // Don't stop audio analysis completely, just pause the animation
+    // This prevents the "already connected" error when resuming
+  }, []);
 
   const resumeDanceMusic = useCallback(() => {
     if (!audioRef.current) return;
@@ -306,6 +355,8 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
     audioRef.current.play().then(() => {
       setAudioState(prev => ({ ...prev, isPlaying: true }));
       isPlayingRef.current = true;
+      // Audio analysis is already running, just resume the animation
+      // The animateAudioLevels function will automatically start working again
     }).catch((error) => {
       console.error('Failed to resume dance music:', error);
       setAudioState(prev => ({ ...prev, isPlaying: false }));
