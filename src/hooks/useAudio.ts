@@ -11,12 +11,14 @@ export const useAudio = () => {
   const discoTrackRef = useRef<HTMLAudioElement | null>(null);
   const ambientSoundsRef = useRef<HTMLAudioElement | null>(null);
   const elevatorSoundRef = useRef<HTMLAudioElement | null>(null);
+  const djVoiceOverRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     // Initialize audio elements
     discoTrackRef.current = new Audio();
     ambientSoundsRef.current = new Audio();
     elevatorSoundRef.current = new Audio();
+    djVoiceOverRef.current = new Audio();
 
     // Load the actual elevator sound effect
     if (elevatorSoundRef.current) {
@@ -25,12 +27,19 @@ export const useAudio = () => {
       elevatorSoundRef.current.volume = 0.6;
     }
 
+    // Load the DJ voice-over audio
+    if (djVoiceOverRef.current) {
+      djVoiceOverRef.current.src = '/sounds/voiceover.mp3';
+      djVoiceOverRef.current.preload = 'auto';
+      djVoiceOverRef.current.volume = 0.8;
+    }
+
     // For demo purposes, we'll use data URLs for simple tones
     // In production, you'd load actual audio files
     setAudioState(prev => ({ ...prev, isLoaded: true }));
 
     return () => {
-      [discoTrackRef, ambientSoundsRef, elevatorSoundRef].forEach(ref => {
+      [discoTrackRef, ambientSoundsRef, elevatorSoundRef, djVoiceOverRef].forEach(ref => {
         if (ref.current) {
           ref.current.pause();
           ref.current.currentTime = 0;
@@ -73,7 +82,7 @@ export const useAudio = () => {
   };
 
   const stopAllSounds = () => {
-    [discoTrackRef, ambientSoundsRef, elevatorSoundRef].forEach(ref => {
+    [discoTrackRef, ambientSoundsRef, elevatorSoundRef, djVoiceOverRef].forEach(ref => {
       if (ref.current) {
         ref.current.pause();
         ref.current.currentTime = 0;
@@ -83,8 +92,10 @@ export const useAudio = () => {
   };
 
   const playDJVoiceOver = () => {
-    // Simulate DJ voice-over with a simple notification
-    console.log('🎤 DJ: "Welcome to the hottest spot in the city..."');
+    if (djVoiceOverRef.current) {
+      djVoiceOverRef.current.currentTime = 0;
+      djVoiceOverRef.current.play().catch(console.log);
+    }
   };
 
   return {

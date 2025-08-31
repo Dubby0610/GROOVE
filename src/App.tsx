@@ -27,6 +27,7 @@ function AppRoutes() {
   const { playDiscoTrack, playElevatorSound, playDJVoiceOver } = useAudio();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState<string | undefined>(undefined);
+  const [loadingAudioFile, setLoadingAudioFile] = useState<string | undefined>(undefined);
   const [selectedClubFloor, setSelectedClubFloor] = useState<number | null>(null);
   // Add a state to track if club floor is being determined
   const [isDeterminingFloor, setIsDeterminingFloor] = useState(false);
@@ -43,6 +44,7 @@ function AppRoutes() {
   const handleEnterBuilding = () => {
     setIsLoading(true);
     setLoadingMessage('Calling the elevator...');
+    setLoadingAudioFile(undefined); // Clear any previous audio file
     setTimeout(() => {
       setIsLoading(false);
       setLoadingMessage(undefined);
@@ -56,8 +58,10 @@ function AppRoutes() {
     localStorage.setItem("selectedClubFloor", String(floor));
     setIsLoading(true);
     setLoadingMessage("Arriving at the club...");
+    setLoadingAudioFile(undefined); // IMPORTANT: Clear any previous audio file
     setTimeout(() => {
       setIsLoading(false);
+      setLoadingMessage(undefined);
       navigate('/club-door');
     }, 1000); // Show loading for 1s
   };
@@ -66,11 +70,13 @@ function AppRoutes() {
   const handleEnterClub = () => {
     setIsLoading(true);
     setLoadingMessage('Entering the club...');
+    setLoadingAudioFile(undefined); // NO audio during this phase
     setIsDeterminingFloor(true);
     playDiscoTrack(false); // Clear
     setTimeout(() => {
       setIsLoading(false);
       setLoadingMessage(undefined);
+      setLoadingAudioFile(undefined);
       navigate('/club-success');
       setTimeout(() => setIsDeterminingFloor(false), 1000); // Show loading for 1s after navigation
     }, 2000);
@@ -78,7 +84,7 @@ function AppRoutes() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {isLoading && <LoadingScreen message={loadingMessage} />}
+      {isLoading && <LoadingScreen message={loadingMessage} audioFile={loadingAudioFile} />}
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/alley" element={<AlleyScene onEnterBuilding={handleEnterBuilding} />} />
@@ -98,7 +104,10 @@ function AppRoutes() {
           element={
             (selectedClubFloor || localStorage.getItem("selectedClubFloor")) ? (
               isDeterminingFloor ? (
-                <LoadingScreen message="Loading your club experience..." />
+                <LoadingScreen 
+                  message="Loading your club experience..." 
+                  audioFile="/sounds/Dj_Barry_dancefloor line.mp3"
+                />
               ) : (
                 <NightClubScene floor={selectedClubFloor || Number(localStorage.getItem("selectedClubFloor"))} />
               )

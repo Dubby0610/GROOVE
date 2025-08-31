@@ -5,12 +5,13 @@ import { LoadingScreen } from "./LoadingScreen";
 import { apiFetch } from "../utils/apiFetch";
 import { useNightclubMusic } from "../hooks/useNightclubMusic";
 
-const FLOOR_LABELS = [
-  "1st floor - Party Vibes",
-  "2nd floor - Boogie Wonderland",
-  "3rd floor - For The Sexy People",
-  "4th floor - Late Night Agenda",
-];
+// Floor labels (for future use)
+// const FLOOR_LABELS = [
+//   "1st floor - Party Vibes",
+//   "2nd floor - Boogie Wonderland", 
+//   "3rd floor - For The Sexy People",
+//   "4th floor - Late Night Agenda",
+// ];
 
 interface NightClubSceneProps {
   floor: number;
@@ -24,13 +25,13 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
     setVolume, 
     getVolume, 
     toggleMusic,
-    getAudioLevels,
+    seekTo,
     audioState 
   } = useNightclubMusic('/sounds/floor_1_1.mp3');
   
   // Format time helper function
   const formatTime = (seconds: number): string => {
-    if (isNaN(seconds) || seconds === 0) return '0:00';
+    if (isNaN(seconds) || seconds <= 0) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -59,10 +60,33 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
 
   // Start timer only after 3D models are loaded
   const handleModelsLoaded = () => {
+    console.log('🏗️ 3D models loaded - setting up nightclub');
     setIsLoading(false);
     setTimerStarted(true);
-    // Start dance music when club is loaded
+    
+    // AUTO-START nightclub music with debugging
+    console.log('🎵 AUTO-STARTING nightclub music...');
+    console.log('🔍 Audio state before play:', audioState);
+    
+    // Immediate attempt
     playDanceMusic();
+    
+    // Check if it worked after a short delay
+    setTimeout(() => {
+      console.log('🔍 Audio state after play attempt:', audioState);
+      
+      if (!audioState.isPlaying) {
+        console.log('⚠️ Music not playing - adding click listener');
+        const startMusicOnClick = () => {
+          console.log('🖱️ User clicked - starting music manually');
+          playDanceMusic();
+          document.removeEventListener('click', startMusicOnClick);
+        };
+        document.addEventListener('click', startMusicOnClick);
+      } else {
+        console.log('✅ Music is playing successfully!');
+      }
+    }, 1000);
   };
 
   // Tick every minute to update backend and UI (only after models are loaded)
@@ -105,14 +129,23 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
     };
   }, [stopDanceMusic]);
 
+  // Removed complex autoplay handler - using simple button instead
+
   // Handle manual logout
   const handleLogout = async () => {
     try {
-      await apiFetch(`/payment/cancel`, { method: "POST" });
-    } finally {
+      // For manual logout, we don't cancel the subscription - it should remain active
+      // Only clear the timer and navigate to sign out
       if (timerRef.current) window.clearInterval(timerRef.current);
       setRemaining(0);
       stopDanceMusic(); // Stop music when logging out
+      navigate('/sign-out', { state: { reason: 'manual_logout' } });
+    } catch (error) {
+      console.error('Error during manual logout:', error);
+      // Ensure logout continues even if there's an error
+      if (timerRef.current) window.clearInterval(timerRef.current);
+      setRemaining(0);
+      stopDanceMusic();
       navigate('/sign-out', { state: { reason: 'manual_logout' } });
     }
   };
@@ -129,6 +162,8 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
         </div>
       )}
       
+      {/* Music should start automatically now */}
+
       {/* Beautiful Music Visualizer - Center Bottom */}
       {!isLoading && (
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30">
@@ -138,9 +173,9 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
              {/* Music Progress Bar */}
              <div className="flex items-center justify-center gap-3 h-12">
                {/* Current Time */}
-               <div className="text-white/80 text-sm font-mono min-w-[40px] text-right">
-                 {formatTime(audioState.currentTime)}
-               </div>
+              <div className="text-white/80 text-sm font-mono min-w-[40px] text-right">
+                {formatTime(audioState.currentTime)}
+              </div>
                
                {/* Progress Bar */}
                <div className="relative flex-1 max-w-[200px]">
@@ -151,9 +186,8 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
                      const clickX = e.clientX - rect.left;
                      const percentage = clickX / rect.width;
                      const newTime = percentage * audioState.duration;
-                     if (audioState.isPlaying && newTime >= 0 && newTime <= audioState.duration) {
-                       // Update audio time (this would need to be implemented in the hook)
-                       console.log('Seek to:', newTime);
+                     if (newTime >= 0 && newTime <= audioState.duration) {
+                       seekTo(newTime);
                      }
                    }}
                  >
@@ -168,18 +202,19 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
                  
                  {/* Progress Handle */}
                  <div 
-                   className="absolute top-1/2 transform -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200"
+                   className="absolute top-1/2 transform -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200 hover:bg-pink-200"
                    style={{
                      left: `${audioState.duration > 0 ? (audioState.currentTime / audioState.duration) * 100 : 0}%`,
-                     transform: 'translate(-50%, -50%)'
+                     transform: 'translate(-50%, -50%)',
+                     boxShadow: '0 0 10px rgba(255, 255, 255, 0.5)'
                    }}
                  />
                </div>
                
                {/* Total Duration */}
-               <div className="text-white/80 text-sm font-mono min-w-[40px] text-left">
-                 {formatTime(audioState.duration)}
-               </div>
+              <div className="text-white/80 text-sm font-mono min-w-[40px] text-left">
+                {formatTime(audioState.duration)}
+              </div>
              </div>
                          
              {/* Professional Controls Row */}
@@ -228,13 +263,23 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
                  </div>
                </div>
                
-               {/* Enhanced Status Indicator */}
-               <div className="flex items-center gap-2">
-                 <div className={`w-3 h-3 rounded-full ${audioState.isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'} shadow-lg`}></div>
-                 <span className="text-white/80 text-sm font-semibold tracking-wide">
-                   {audioState.isPlaying ? 'LIVE' : 'PAUSED'}
-                 </span>
-               </div>
+                             {/* Enhanced Status Indicator */}
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${audioState.isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'} shadow-lg`}></div>
+                <span className="text-white/80 text-sm font-semibold tracking-wide">
+                  {audioState.isPlaying ? 'LIVE' : 'PAUSED'}
+                </span>
+                {/* Simple restart button if music stops */}
+                {!audioState.isPlaying && (
+                  <button
+                    onClick={playDanceMusic}
+                    className="ml-2 px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition-colors"
+                    title="Restart music"
+                  >
+                    ▶️
+                  </button>
+                )}
+              </div>
              </div>
                          
              {/* Professional Floor Label */}

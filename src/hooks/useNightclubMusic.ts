@@ -9,6 +9,7 @@ interface UseNightclubMusicReturn {
   getVolume: () => number;
   isPlaying: () => boolean;
   toggleMusic: () => void;
+  seekTo: (timeInSeconds: number) => void;
   getAudioLevels: () => number[];
   audioState: {
     isLoaded: boolean;
@@ -21,350 +22,372 @@ interface UseNightclubMusicReturn {
 
 export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const progressTimerRef = useRef<number | null>(null);
   const isPlayingRef = useRef(false);
-  const animationFrameRef = useRef<number | null>(null);
+  const currentTimeRef = useRef(0);
+  const durationRef = useRef(0);
   
   const [audioState, setAudioState] = useState({
     isLoaded: false,
     isPlaying: false,
-    volume: 0.7, // Higher volume for dance music
+    volume: 0.7,
     duration: 0,
     currentTime: 0
   });
 
+  // Simple audio levels for visualization
   const [audioLevels, setAudioLevels] = useState<number[]>(new Array(9).fill(0));
-  const [barVelocities, setBarVelocities] = useState<number[]>(new Array(9).fill(0));
-  const [barTargets, setBarTargets] = useState<number[]>(new Array(9).fill(0));
 
-  // Initialize audio element and audio context for analysis
-  useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio(audioFile);
-      audioRef.current.preload = 'auto';
-      audioRef.current.volume = 0.7;
-      audioRef.current.loop = true; // Loop dance music
-      
-      // Set up audio event listeners
-      audioRef.current.addEventListener('loadedmetadata', () => {
-        setAudioState(prev => ({
-          ...prev,
-          isLoaded: true,
-          duration: audioRef.current?.duration || 0
-        }));
-      });
-
-      audioRef.current.addEventListener('ended', () => {
-        // For looped audio, this won't fire, but just in case
-        if (audioRef.current && audioRef.current.loop) {
-          audioRef.current.currentTime = 0;
-          audioRef.current.play().catch(console.error);
-        }
-      });
-
-      audioRef.current.addEventListener('error', (e) => {
-        console.error('Nightclub music error:', e);
-        setAudioState(prev => ({ ...prev, isPlaying: false }));
-        isPlayingRef.current = false;
-      });
-
-      audioRef.current.addEventListener('play', () => {
-        setAudioState(prev => ({ ...prev, isPlaying: true }));
-        isPlayingRef.current = true;
-        startAudioAnalysis();
-      });
-
-      audioRef.current.addEventListener('pause', () => {
-        setAudioState(prev => ({ ...prev, isPlaying: false }));
-        isPlayingRef.current = false;
-        stopAudioAnalysis();
-      });
-
-      // Update current time for progress tracking
-      audioRef.current.addEventListener('timeupdate', () => {
-        if (audioRef.current) {
+  // BULLETPROOF PROGRESS TRACKING
+  const startProgressTracking = useCallback(() => {
+    if (progressTimerRef.current) return; // Already running
+    
+    console.log('🚀 Starting bulletproof progress tracking');
+    
+    progressTimerRef.current = window.setInterval(() => {
+      if (audioRef.current && isPlayingRef.current && !audioRef.current.paused) {
+        const newCurrentTime = audioRef.current.currentTime;
+        const newDuration = audioRef.current.duration || 0;
+        
+        // Update refs for immediate access
+        currentTimeRef.current = newCurrentTime;
+        durationRef.current = newDuration;
+        
+        // Update state for UI
           setAudioState(prev => ({
             ...prev,
-            currentTime: audioRef.current.currentTime
-          }));
+          currentTime: newCurrentTime,
+          duration: newDuration,
+          isLoaded: newDuration > 0
+        }));
+        
+        // Debug logging every 5 seconds
+        if (Math.floor(newCurrentTime) % 5 === 0) {
+          console.log(`⏱️ Progress: ${newCurrentTime.toFixed(1)}s / ${newDuration.toFixed(1)}s`);
         }
-      });
-    }
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
       }
-      // Always clean up audio analysis on unmount
-      stopAudioAnalysis();
-    };
-  }, [audioFile]);
+    }, 50); // Update every 50ms for super smooth progress
+  }, []);
 
-  // Audio analysis setup
-  const startAudioAnalysis = useCallback(() => {
-    if (!audioRef.current || !audioRef.current.src) return;
-    
-    // Prevent multiple instances
-    if (audioContextRef.current && audioContextRef.current.state === 'running') return;
-
-    try {
-      // Create audio context
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256; // 128 frequency bins for better resolution
-      analyserRef.current.smoothingTimeConstant = 0.6; // More responsive
-      analyserRef.current.minDecibels = -90;
-      analyserRef.current.maxDecibels = -10;
-
-      // Create source from audio element
-      sourceRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
-      sourceRef.current.connect(analyserRef.current);
-      analyserRef.current.connect(audioContextRef.current.destination);
-
-      // Resume audio context if suspended (needed for some browsers)
-      if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume();
-      }
-
-      // Start animation loop with a small delay to ensure smooth restart
-      setTimeout(() => {
-        animateAudioLevels();
-      }, 50);
-    } catch (error) {
-      // If the error is about the audio element already being connected,
-      // we need to create a new audio element
-      if (error.message.includes('already connected')) {
-        console.log('Audio element already connected, creating new audio element');
-        // Create a new audio element with the same source
-        const newAudio = new Audio(audioRef.current!.src);
-        newAudio.loop = true;
-        newAudio.volume = audioRef.current!.volume;
-        newAudio.currentTime = audioRef.current!.currentTime;
-        
-        // Replace the old audio element
-        audioRef.current = newAudio;
-        
-        // Try to start analysis again with the new audio element
-        setTimeout(() => {
-          startAudioAnalysis();
-        }, 100);
-        return;
-      }
-      console.error('Failed to start audio analysis:', error);
+  const stopProgressTracking = useCallback(() => {
+    if (progressTimerRef.current) {
+      console.log('⏹️ Stopping progress tracking');
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
     }
   }, []);
 
-  const stopAudioAnalysis = useCallback(() => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
+  // Simple visualization animation
+  const startVisualization = useCallback(() => {
+    if (!isPlayingRef.current) return;
+    
+    // Generate dynamic audio levels
+    const newLevels = Array.from({ length: 9 }, (_, i) => {
+      const baseLevel = Math.random() * 0.8;
+      const timeOffset = Date.now() * 0.005 + i * 0.5;
+      const wave = Math.sin(timeOffset) * 0.3 + 0.5;
+      return Math.max(0.1, Math.min(1, baseLevel * wave));
+    });
+    
+    setAudioLevels(newLevels);
+    
+    // Continue animation if still playing
+    if (isPlayingRef.current) {
+      setTimeout(startVisualization, 60); // ~16fps for smooth animation
     }
-    
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    
-    analyserRef.current = null;
-    sourceRef.current = null;
-    
-    // Reset levels and physics
+  }, []);
+
+  const stopVisualization = useCallback(() => {
     setAudioLevels(new Array(9).fill(0));
-    setBarVelocities(new Array(9).fill(0));
-    setBarTargets(new Array(9).fill(0));
   }, []);
 
-  const animateAudioLevels = useCallback(() => {
-    if (!analyserRef.current) return;
+  // Initialize audio element
+  useEffect(() => {
+    console.log('🎵 useNightclubMusic useEffect triggered with audioFile:', audioFile);
     
-    // Always continue the animation loop, even when paused
-    // This ensures the visualizer can restart immediately when music resumes
-    if (!isPlayingRef.current) {
-      // Reset levels to zero when not playing
-      setAudioLevels(new Array(9).fill(0));
-      setBarVelocities(new Array(9).fill(0));
-      setBarTargets(new Array(9).fill(0));
-      // Continue the animation loop even when paused
-      animationFrameRef.current = requestAnimationFrame(animateAudioLevels);
+    if (audioRef.current) {
+      console.log('🎵 Audio already initialized, skipping');
+      return; // Already initialized
+    }
+    
+    console.log('🎵 Initializing nightclub BACKGROUND audio for:', audioFile);
+    
+    let audio: HTMLAudioElement;
+    
+    try {
+      audio = new Audio(audioFile);
+      audio.preload = 'auto'; // Load full audio for immediate playback
+      audio.volume = 0.7;
+      audio.loop = true; // CRITICAL: Must loop for background music
+      audio.crossOrigin = 'anonymous';
+      audio.autoplay = false; // We'll manually trigger play
+      audioRef.current = audio;
+      
+      console.log('✅ Audio element created successfully');
+    } catch (error) {
+      console.error('❌ Failed to create Audio element:', error);
       return;
     }
 
-    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-    analyserRef.current.getByteFrequencyData(dataArray);
+    console.log('📂 Audio file path:', audioFile);
+    console.log('🔧 Audio element created with properties:');
+    console.log('   - Volume:', audio.volume);
+    console.log('   - Loop:', audio.loop);
+    console.log('   - Preload:', audio.preload);
+    console.log('   - Autoplay:', audio.autoplay);
 
-    // Convert frequency data to 9 visualizer bars with better frequency mapping
-    const newTargets: number[] = [];
-    const barCount = 9;
-    
-    // Frequency ranges for each bar (Hz) - more realistic distribution
-    const frequencyRanges = [
-      [20, 60],      // Sub-bass
-      [60, 250],     // Bass
-      [250, 500],    // Low-mid
-      [500, 2000],   // Mid
-      [2000, 4000],  // Upper-mid
-      [4000, 6000],  // Presence
-      [6000, 8000],  // Brilliance
-      [8000, 12000], // High
-      [12000, 20000] // Ultra-high
-    ];
+    // Event handlers
+    const onLoadedMetadata = () => {
+      const duration = audio.duration || 0;
+      console.log('📊 Nightclub metadata loaded:');
+      console.log('   - Duration:', duration);
+      console.log('   - Ready state:', audio.readyState);
+      console.log('   - Network state:', audio.networkState);
+      
+      durationRef.current = duration;
+      setAudioState(prev => ({
+        ...prev,
+        duration: duration,
+        isLoaded: duration > 0
+      }));
+    };
 
-    for (let i = 0; i < barCount; i++) {
-      const [lowFreq, highFreq] = frequencyRanges[i];
+    const onTimeUpdate = () => {
+      // Always update time and duration when available
+      const currentTime = audio.currentTime;
+      const newDuration = audio.duration || 0;
       
-      // Map frequency range to data array indices
-      const lowIndex = Math.floor((lowFreq / 22050) * dataArray.length);
-      const highIndex = Math.floor((highFreq / 22050) * dataArray.length);
+      // Update refs for immediate access
+      currentTimeRef.current = currentTime;
+      durationRef.current = newDuration;
       
-      let maxLevel = 0;
-      let sum = 0;
-      let count = 0;
+      // Update state for UI - always update, not just when playing
+      setAudioState(prev => ({
+        ...prev,
+        currentTime: currentTime,
+        duration: newDuration,
+        isLoaded: newDuration > 0,
+        // Also check if actually playing
+        isPlaying: !audio.paused && !audio.ended
+      }));
       
-      // Get the maximum level in this frequency range
-      for (let j = lowIndex; j <= highIndex && j < dataArray.length; j++) {
-        if (dataArray[j] > maxLevel) {
-          maxLevel = dataArray[j];
-        }
-        sum += dataArray[j];
-        count++;
+      // Debug logging every 5 seconds
+      if (Math.floor(currentTime) % 5 === 0) {
+        console.log(`⏱️ Progress: ${currentTime.toFixed(1)}s / ${newDuration.toFixed(1)}s, Playing: ${!audio.paused}`);
       }
-      
-      // Use both max and average for more dynamic response
-      const average = count > 0 ? sum / count : 0;
-      const combinedLevel = (maxLevel * 0.7 + average * 0.3) / 255;
-      
-      // Apply frequency-specific weighting for more realistic response
-      let weightedLevel = combinedLevel;
-      if (i < 3) { // Bass frequencies - more prominent and punchy
-        weightedLevel *= 1.4;
-        // Add bass punch effect
-        if (weightedLevel > 0.3) {
-          weightedLevel += Math.sin(Date.now() * 0.01) * 0.1;
-        }
-      } else if (i > 6) { // High frequencies - more airy and responsive
-        weightedLevel *= 0.9;
-        // Add high frequency shimmer
-        if (weightedLevel > 0.2) {
-          weightedLevel += Math.sin(Date.now() * 0.02 + i) * 0.05;
-        }
-      }
-      
-      // Add subtle randomness for natural movement
-      const randomFactor = Math.random() * 0.08;
-      const finalLevel = Math.min(1, Math.max(0, weightedLevel + randomFactor));
-      
-      newTargets.push(finalLevel);
-    }
+    };
 
-    // Update targets for smooth animation
-    setBarTargets(newTargets);
-    
-    // Apply spring physics for realistic bar movement
-    const newLevels: number[] = [];
-    const newVelocities: number[] = [];
-    
-    for (let i = 0; i < barCount; i++) {
-      const currentLevel = audioLevels[i];
-      const targetLevel = newTargets[i];
-      const currentVelocity = barVelocities[i];
-      
-      // Spring physics constants (different for each frequency range)
-      let springStrength = 0.15; // Base spring strength
-      let damping = 0.85;        // Base damping
-      
-      if (i < 3) { // Bass - slower, more powerful
-        springStrength = 0.12;
-        damping = 0.9;
-      } else if (i > 6) { // Highs - faster, more responsive
-        springStrength = 0.2;
-        damping = 0.8;
-      }
-      
-      // Calculate spring force
-      const displacement = targetLevel - currentLevel;
-      const springForce = displacement * springStrength;
-      
-      // Update velocity with spring force and damping
-      const newVelocity = (currentVelocity + springForce) * damping;
-      
-      // Update position
-      const newLevel = currentLevel + newVelocity;
-      
-      newLevels.push(Math.max(0, Math.min(1, newLevel)));
-      newVelocities.push(newVelocity);
-    }
-    
-    setAudioLevels(newLevels);
-    setBarVelocities(newVelocities);
-    
-    // Always continue the animation loop to allow restarting
-    animationFrameRef.current = requestAnimationFrame(animateAudioLevels);
-  }, [audioLevels, barVelocities]);
-
-  const getAudioLevels = useCallback(() => {
-    return audioLevels;
-  }, [audioLevels]);
-
-  const playDanceMusic = useCallback(() => {
-    if (!audioRef.current) return;
-
-    audioRef.current.currentTime = 0;
-    audioRef.current.volume = audioState.volume;
-    
-    audioRef.current.play().then(() => {
-      setAudioState(prev => ({ ...prev, isPlaying: true }));
+    const onPlay = () => {
+      console.log('▶️ Audio PLAY event');
       isPlayingRef.current = true;
-      // Only start audio analysis if it's not already running
-      if (!audioContextRef.current) {
-        startAudioAnalysis();
-      }
-    }).catch((error) => {
-      console.error('Failed to play dance music:', error);
-      setAudioState(prev => ({ ...prev, isPlaying: false }));
+      setAudioState(prev => ({ ...prev, isPlaying: true }));
+      startProgressTracking();
+      startVisualization();
+    };
+
+    const onPause = () => {
+      console.log('⏸️ Audio PAUSE event');
       isPlayingRef.current = false;
-    });
-  }, [audioState.volume, startAudioAnalysis]);
+      setAudioState(prev => ({ ...prev, isPlaying: false }));
+      // Don't stop progress tracking - keep it running for accurate state
+    };
+
+    const onEnded = () => {
+      console.log('🔄 Audio ENDED - Looping');
+      if (audio.loop) {
+        audio.currentTime = 0;
+        currentTimeRef.current = 0;
+        setAudioState(prev => ({ ...prev, currentTime: 0 }));
+      }
+    };
+
+    const onError = (e: Event) => {
+      console.error('❌ Nightclub audio ERROR:');
+      console.error('   - Event:', e);
+      console.error('   - Audio src:', audio.src);
+      console.error('   - Audio error:', audio.error);
+      console.error('   - Network state:', audio.networkState);
+      console.error('   - Ready state:', audio.readyState);
+      
+      isPlayingRef.current = false;
+      setAudioState(prev => ({ ...prev, isPlaying: false }));
+      stopProgressTracking();
+    };
+
+    // Attach all event listeners
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
+
+    // Force load metadata
+    audio.load();
+
+    // Cleanup function
+    return () => {
+      console.log('🧹 Cleaning up audio');
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
+      
+      stopProgressTracking();
+      stopVisualization();
+      
+      audio.pause();
+      audio.src = '';
+    };
+  }, [audioFile]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopProgressTracking();
+      stopVisualization();
+    };
+  }, [stopProgressTracking, stopVisualization]);
+
+  // Periodic state sync to ensure UI stays in sync with audio
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      if (audioRef.current) {
+        const audio = audioRef.current;
+        const isActuallyPlaying = !audio.paused && !audio.ended;
+        
+        // Sync playing state
+        if (isActuallyPlaying !== audioState.isPlaying) {
+          console.log(`🔄 Syncing playing state: ${audioState.isPlaying} → ${isActuallyPlaying}`);
+          setAudioState(prev => ({ ...prev, isPlaying: isActuallyPlaying }));
+          isPlayingRef.current = isActuallyPlaying;
+        }
+        
+        // Sync time and duration
+        const currentTime = audio.currentTime;
+        const duration = audio.duration || 0;
+        
+        if (Math.abs(currentTime - audioState.currentTime) > 0.1 || Math.abs(duration - audioState.duration) > 0.1) {
+          setAudioState(prev => ({
+            ...prev,
+            currentTime: currentTime,
+            duration: duration,
+            isLoaded: duration > 0
+          }));
+        }
+      }
+    }, 100); // Check every 100ms
+    
+    return () => clearInterval(syncInterval);
+  }, [audioState.isPlaying, audioState.currentTime, audioState.duration]);
+
+    // NIGHTCLUB BACKGROUND MUSIC - AUTO START
+  const playDanceMusic = useCallback(() => {
+    console.log('🎵 playDanceMusic() called');
+    
+    if (!audioRef.current) {
+      console.error('❌ Nightclub audio not initialized - audioRef.current is null');
+      return;
+    }
+
+    console.log('🎵 STARTING nightclub background music...');
+    console.log('🔍 Audio element details:');
+    console.log('   - src:', audioRef.current.src);
+    console.log('   - readyState:', audioRef.current.readyState);
+    console.log('   - networkState:', audioRef.current.networkState);
+    console.log('   - paused:', audioRef.current.paused);
+    console.log('   - ended:', audioRef.current.ended);
+    
+    const audio = audioRef.current;
+    
+    // Setup for background music
+    audio.currentTime = 0;
+    audio.volume = audioState.volume;
+    audio.loop = true; // Critical for background music
+    
+    currentTimeRef.current = 0;
+    setAudioState(prev => ({ ...prev, currentTime: 0 }));
+    
+    console.log('🚀 Playing nightclub music automatically...');
+    console.log('🔧 Final audio properties:');
+    console.log('   - Volume:', audio.volume);
+    console.log('   - Loop:', audio.loop);
+    console.log('   - Current time:', audio.currentTime);
+    
+    // IMPORTANT: Use the hook's managed audio element so event listeners work
+    audio.play()
+      .then(() => {
+        console.log('✅ NIGHTCLUB MUSIC PLAYING!');
+        // The onPlay event listener will handle state updates
+        // But also update immediately for responsiveness
+        isPlayingRef.current = true;
+        setAudioState(prev => ({ ...prev, isPlaying: true }));
+      })
+      .catch((error) => {
+        console.error('❌ Nightclub music autoplay FAILED:', error);
+        console.error('   - Error name:', error.name);
+        console.error('   - Error message:', error.message);
+        isPlayingRef.current = false;
+        setAudioState(prev => ({ ...prev, isPlaying: false }));
+      });
+  }, [audioState.volume]);
 
   const stopDanceMusic = useCallback(() => {
     if (!audioRef.current) return;
 
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0;
-    setAudioState(prev => ({ ...prev, isPlaying: false }));
+    console.log('⏹️ STOP - Reset to beginning');
+    
+    const audio = audioRef.current;
+    audio.pause();
+    audio.currentTime = 0;
+    
     isPlayingRef.current = false;
-    // Only stop audio analysis when completely stopping, not when pausing
-    stopAudioAnalysis();
-  }, [stopAudioAnalysis]);
+    currentTimeRef.current = 0;
+    
+    setAudioState(prev => ({
+      ...prev,
+      isPlaying: false,
+      currentTime: 0
+    }));
+    
+    stopProgressTracking();
+    stopVisualization();
+  }, [stopProgressTracking, stopVisualization]);
 
   const pauseDanceMusic = useCallback(() => {
     if (!audioRef.current) return;
 
+    console.log('⏸️ PAUSE - Keep position');
+
     audioRef.current.pause();
-    setAudioState(prev => ({ ...prev, isPlaying: false }));
     isPlayingRef.current = false;
-    // Don't stop audio analysis completely, just pause the animation
-    // This prevents the "already connected" error when resuming
+    setAudioState(prev => ({ ...prev, isPlaying: false }));
+    // Keep progress tracking running to maintain state
   }, []);
 
   const resumeDanceMusic = useCallback(() => {
     if (!audioRef.current) return;
 
-    audioRef.current.play().then(() => {
-      setAudioState(prev => ({ ...prev, isPlaying: true }));
-      isPlayingRef.current = true;
-      // Audio analysis is already running, just resume the animation
-      // The animateAudioLevels function will automatically start working again
-    }).catch((error) => {
-      console.error('Failed to resume dance music:', error);
-      setAudioState(prev => ({ ...prev, isPlaying: false }));
-      isPlayingRef.current = false;
-    });
+    console.log('▶️ RESUME - Continue from current position');
+    
+    audioRef.current.play()
+      .then(() => {
+        console.log('✅ Resume successful');
+        isPlayingRef.current = true;
+        setAudioState(prev => ({ ...prev, isPlaying: true }));
+      })
+      .catch((error) => {
+        console.error('❌ Resume failed:', error);
+        isPlayingRef.current = false;
+        setAudioState(prev => ({ ...prev, isPlaying: false }));
+      });
   }, []);
 
   const toggleMusic = useCallback(() => {
+    console.log('🔄 TOGGLE - Current state:', isPlayingRef.current ? 'PLAYING' : 'PAUSED');
+    
     if (isPlayingRef.current) {
       pauseDanceMusic();
     } else {
@@ -374,6 +397,7 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
 
   const setVolume = useCallback((volume: number) => {
     const clampedVolume = Math.max(0, Math.min(1, volume));
+    
     setAudioState(prev => ({ ...prev, volume: clampedVolume }));
     
     if (audioRef.current) {
@@ -383,11 +407,31 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
 
   const getVolume = useCallback(() => {
     return audioState.volume;
-  }, [audioState.volume]);
+  }, []);
 
   const isPlaying = useCallback(() => {
     return isPlayingRef.current;
   }, []);
+
+  const seekTo = useCallback((timeInSeconds: number) => {
+    if (!audioRef.current || !durationRef.current) return;
+    
+    const clampedTime = Math.max(0, Math.min(timeInSeconds, durationRef.current));
+    
+    console.log(`🎯 SEEK to ${clampedTime.toFixed(1)}s`);
+    
+    audioRef.current.currentTime = clampedTime;
+    currentTimeRef.current = clampedTime;
+    
+    setAudioState(prev => ({
+      ...prev,
+      currentTime: clampedTime
+    }));
+  }, []);
+
+  const getAudioLevels = useCallback(() => {
+    return audioLevels;
+  }, [audioLevels]);
 
   return {
     playDanceMusic,
@@ -398,6 +442,7 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
     getVolume,
     isPlaying,
     toggleMusic,
+    seekTo,
     getAudioLevels,
     audioState
   };

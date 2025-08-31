@@ -39,7 +39,6 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
   // Derive info from clubFloor
   const idx = clubFloor ? (clubFloor - 1) % FLOOR_IMAGES.length : 0;
   const clubImage = FLOOR_IMAGES[idx];
-  const clubLabel = FLOOR_LABELS[idx];
   const themeColor = FLOOR_THEMES[idx];
 
   const [pulseIntensity, setPulseIntensity] = useState(0.5);
@@ -65,23 +64,26 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
   const welcomeMusicRef = useRef<HTMLAudioElement | null>(null);
   const paymentMusicRef = useRef<HTMLAudioElement | null>(null);
 
+  // Restored: DJ voiceover should work at club door (this was working fine)
+  const [hasPlayedVoiceover, setHasPlayedVoiceover] = useState(false);
+  
+  const playDJVoiceOverOnce = () => {
+    if (!hasPlayedVoiceover) {
+      playDJVoiceOver(); // This plays voiceover.mp3 (which should work)
+      setHasPlayedVoiceover(true);
+    }
+  };
+
   useEffect(() => {
     // Simulate music-driven lighting pulse
     const interval = setInterval(() => {
       setPulseIntensity(Math.random() * 0.5 + 0.3);
     }, 200);
 
-    // Trigger DJ voice-over after a moment
-    const voiceOverTimer = setTimeout(() => {
-      playDJVoiceOver();
-      setShowWelcomeMessage(true);
-    }, 2000);
-
     return () => {
       clearInterval(interval);
-      clearTimeout(voiceOverTimer);
     };
-  }, [playDJVoiceOver, clubFloor]);
+  }, [clubFloor]);
 
   // Initialize and manage background music
   useEffect(() => {
@@ -126,13 +128,15 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
         setSubscription(data);
         setCheckingSub(false);
         setShowWelcomeMessage(true);
+        // Play DJ voice-over when welcome message shows after auth check (only once)
+        playDJVoiceOverOnce();
       })
       .catch(() => {
         setSubscription(null);
         setCheckingSub(false);
         setShowWelcomeMessage(false);
       });
-  }, [clubFloor]);
+  }, [clubFloor, playDJVoiceOver]);
 
   // Handle auth success
   const handleAuthSuccess = (
@@ -154,6 +158,8 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
         setSubscription(data);
         setCheckingSub(false);
         setShowWelcomeMessage(true);
+        // Play DJ voice-over when welcome message shows after successful auth (only once)
+        playDJVoiceOverOnce();
       })
       .catch(() => {
         setSubscription(null);
@@ -227,7 +233,7 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
       setDjHovered(false);
       
       // Redirect to first page (landing page)
-      window.location.href = "/";
+      window.location.href = "/club-door";
       
     } catch (error) {
       console.error("Error during sign out:", error);
@@ -235,12 +241,11 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
       // Force logout even if there's an error
       localStorage.clear();
       sessionStorage.clear();
-      window.location.href = "/";
+      window.location.href = "/club-door";
     }
   };
 
-  // Extract just the floor name (after the dash)
-  const clubTitle = clubLabel.split("-").slice(1).join("-").trim();
+  // Removed: clubTitle extraction not needed
 
   // On DJ Voice-over message click
   const handleDJClick = () => {
@@ -413,57 +418,88 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
         ))}
       </div>
 
-      {/* DJ Voice-over message only if authenticated and not showing auth modal */}
+      {/* DJ Voice-over modal only if authenticated and not showing auth modal */}
       {((isAuthenticated && showWelcomeMessage && !authModalOpen) || (!showPaymentModal && !authModalOpen)) && (
         <div
-          className="absolute bottom-20 left-1/2 transform -translate-x-1/2 max-w-md mx-4 z-20"
+          className="absolute bottom-20 left-1/2 transform -translate-x-1/2 max-w-sm mx-4 z-20"
           onMouseEnter={() => setDjHovered(true)}
           onMouseLeave={() => setDjHovered(false)}
           onClick={checkingSub ? undefined : handleDJClick}
           style={{ cursor: checkingSub ? "not-allowed" : "pointer" }}
         >
           <div
-            className={`rounded-xl p-6 border-4 transition-all duration-200 animate-fade-in h-40
+            className={`rounded-3xl p-8 border-4 transition-all duration-300 animate-fade-in
               ${
                 djHovered
-                  ? "bg-cyan-100/90 border-cyan-400 shadow-xl ring-4 ring-cyan-300/40"
-                  : "bg-black/80 backdrop-blur-sm border-purple-500/50 shadow-lg"
+                  ? "bg-gradient-to-br from-cyan-100/95 via-purple-50/95 to-pink-100/95 border-cyan-400 shadow-2xl ring-8 ring-cyan-300/30 transform scale-105"
+                  : "bg-gradient-to-br from-black/90 via-purple-900/80 to-black/90 backdrop-blur-lg border-purple-500/60 shadow-xl"
               }`}
             style={{
-              transition: "all 0.25s cubic-bezier(.4,2,.6,1)",
+              transition: "all 0.3s cubic-bezier(.4,2,.6,1)",
               boxShadow: djHovered
-                ? "0 0 32px 8px rgba(34,211,238,0.3), 0 2px 8px rgba(0,0,0,0.2)"
-                : "0 2px 8px rgba(0,0,0,0.2)",
+                ? "0 0 40px 12px rgba(34,211,238,0.4), 0 0 80px 20px rgba(168,85,247,0.2), 0 4px 20px rgba(0,0,0,0.3)"
+                : "0 0 20px 5px rgba(168,85,247,0.3), 0 4px 15px rgba(0,0,0,0.4)",
             }}
           >
-            <div className="text-center">
+            <div className="text-center flex flex-col items-center">
+              {/* Large animated microphone icon */}
               <div
-                className={`text-2xl mb-2 transition-colors duration-200 ${
-                  djHovered ? "text-cyan-700" : "text-purple-200"
+                className={`text-6xl mb-4 transition-all duration-300 ${
+                  djHovered ? "text-cyan-600 animate-pulse" : "text-purple-300 animate-bounce"
                 }`}
+                style={{
+                  filter: djHovered ? "drop-shadow(0 0 20px rgba(34,211,238,0.6))" : "drop-shadow(0 0 15px rgba(168,85,247,0.5))",
+                  transform: djHovered ? "scale(1.1)" : "scale(1)",
+                }}
               >
                 🎤
               </div>
+              
+              {/* DJ Voice-Over title with gradient */}
               <div
-                className={`font-medium mb-2 transition-colors duration-200 ${
-                  djHovered ? "text-cyan-700 font-bold" : "text-purple-400"
+                className={`text-2xl font-bold mb-3 transition-all duration-300 ${
+                  djHovered 
+                    ? "bg-gradient-to-r from-cyan-600 to-purple-600 bg-clip-text text-transparent" 
+                    : "bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"
                 }`}
+                style={{
+                  filter: djHovered ? "drop-shadow(0 2px 8px rgba(34,211,238,0.3))" : "drop-shadow(0 2px 8px rgba(168,85,247,0.4))",
+                }}
               >
                 DJ Voice-Over
               </div>
-              <div
-                className={`text-sm leading-relaxed transition-colors duration-200 ${
-                  djHovered ? "text-gray-800" : "text-white"
-                }`}
-              >
-                "Welcome to the hottest spot in the city! Get ready to
-                experience the grooviest night of your life..."
-              </div>
-              {!djHovered && (
-                <div className="mt-5 text-cyan-300 text-xs font-semibold animate-bounce">
-                  {checkingSub ? "Checking access..." : "Click here to enter!"}
+
+              {/* Status message with animated background */}
+              <div className={`relative px-6 py-3 rounded-full transition-all duration-300 ${
+                djHovered 
+                  ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20" 
+                  : "bg-gradient-to-r from-purple-500/30 to-pink-500/30"
+              }`}>
+                <div
+                  className={`text-sm font-semibold transition-colors duration-300 ${
+                    djHovered ? "text-cyan-700" : "text-cyan-300"
+                  }`}
+                >
+                  {checkingSub ? (
+                    <span className="flex items-center space-x-2">
+                      <span className="animate-spin">⏳</span>
+                      <span>Checking access...</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center space-x-2 animate-pulse">
+                      <span>🚪</span>
+                      <span>Click here to enter!</span>
+                    </span>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Animated border effect */}
+              <div className={`absolute inset-0 rounded-3xl border-2 transition-all duration-300 ${
+                djHovered 
+                  ? "border-cyan-300/50 animate-pulse" 
+                  : "border-purple-400/30"
+              }`} style={{ pointerEvents: 'none' }} />
             </div>
           </div>
         </div>
@@ -557,6 +593,8 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
                   setSubscription(data);
                   setCheckingSub(false);
                   setShowWelcomeMessage(true);
+                  // Play DJ voice-over when welcome message shows after payment (only once)
+                  playDJVoiceOverOnce();
                   // Reset the justPaid flag after a delay
                   setTimeout(() => setJustPaid(false), 5000);
                 })

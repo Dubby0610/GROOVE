@@ -48,7 +48,7 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       {/* Background music for alley */}
       <audio
         ref={audioRef}
-        src="/sounds/Walking_groove_in_alley.mp3"
+        src="/sounds/bbc_new-york.mp3"
         loop
         autoPlay
         style={{ display: 'none' }}

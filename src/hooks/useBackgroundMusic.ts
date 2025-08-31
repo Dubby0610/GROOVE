@@ -22,7 +22,7 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
   
   const [audioState, setAudioState] = useState({
     isLoaded: false,
-    isPlaying: false,
+    isPlaying: true,
     volume: 0.4, // Lower volume for background music
     duration: 0
   });
