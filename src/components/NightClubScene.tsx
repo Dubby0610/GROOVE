@@ -216,22 +216,6 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
       
       {/* Music should start automatically now */}
 
-      {/* Manual Music Start Button - Only show if music isn't playing */}
-      {!isLoading && !isPlaying && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30">
-          <button
-            onClick={() => {
-              if (audioRef.current) {
-                audioRef.current.play();
-              }
-            }}
-            className="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-lg text-lg font-bold shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            🎵 Start Music Manually
-          </button>
-        </div>
-      )}
-
       {/* Beautiful Music Visualizer - Center Bottom */}
       {!isLoading && (
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30">
@@ -335,23 +319,6 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
               {/* Enhanced Status Indicator */}
               <div className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'} shadow-lg`}></div>
-                <span className="text-white/80 text-sm font-semibold tracking-wide">
-                  {isPlaying ? 'LIVE' : 'PAUSED'}
-                </span>
-                {/* Simple restart button if music stops */}
-                {!isPlaying && (
-                  <button
-                    onClick={() => {
-                      if (audioRef.current) {
-                        audioRef.current.play();
-                      }
-                    }}
-                    className="ml-2 px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition-colors"
-                    title="Restart music"
-                  >
-                    ▶️
-                  </button>
-                )}
               </div>
             </div>
                         
