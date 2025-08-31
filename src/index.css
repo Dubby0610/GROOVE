@@ -88,6 +88,47 @@
     filter: drop-shadow(0 0 8px currentColor);
   }
   
+  /* Audio Controls Styling */
+  .slider {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  
+  .slider::-webkit-slider-track {
+    background: rgba(255, 255, 255, 0.2);
+    height: 8px;
+    border-radius: 4px;
+  }
+  
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #ec4899;
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(236, 72, 153, 0.5);
+  }
+  
+  .slider::-moz-range-track {
+    background: rgba(255, 255, 255, 0.2);
+    height: 8px;
+    border-radius: 4px;
+  }
+  
+  .slider::-moz-range-thumb {
+    background: #ec4899;
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 10px rgba(236, 72, 153, 0.5);
+  }
+  
   @keyframes shimmer {
     0%, 100% { 
       opacity: 0.4;

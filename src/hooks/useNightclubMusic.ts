@@ -11,6 +11,7 @@ interface UseNightclubMusicReturn {
   toggleMusic: () => void;
   seekTo: (timeInSeconds: number) => void;
   getAudioLevels: () => number[];
+  resetAudioElement: () => HTMLAudioElement | null;
   audioState: {
     isLoaded: boolean;
     isPlaying: boolean;
@@ -143,6 +144,8 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
       console.log('   - Duration:', duration);
       console.log('   - Ready state:', audio.readyState);
       console.log('   - Network state:', audio.networkState);
+      console.log('   - Audio src:', audio.src);
+      console.log('   - Audio currentSrc:', audio.currentSrc);
       
       durationRef.current = duration;
       setAudioState(prev => ({
@@ -150,6 +153,34 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
         duration: duration,
         isLoaded: duration > 0
       }));
+    };
+
+    const onCanPlay = () => {
+      console.log('🎵 Audio can play - ready for playback');
+      console.log('   - Ready state:', audio.readyState);
+      console.log('   - Network state:', audio.networkState);
+    };
+
+    const onCanPlayThrough = () => {
+      console.log('🎵 Audio can play through - fully loaded');
+      console.log('   - Ready state:', audio.readyState);
+      console.log('   - Network state:', audio.networkState);
+    };
+
+    const onLoadStart = () => {
+      console.log('🔄 Audio load started');
+    };
+
+    const onProgress = () => {
+      console.log('📈 Audio loading progress');
+    };
+
+    const onSuspend = () => {
+      console.log('⏸️ Audio loading suspended');
+    };
+
+    const onAbort = () => {
+      console.log('🚫 Audio loading aborted');
     };
 
     const onTimeUpdate = () => {
@@ -221,6 +252,12 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
     audio.addEventListener('pause', onPause);
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('error', onError);
+    audio.addEventListener('canplay', onCanPlay);
+    audio.addEventListener('canplaythrough', onCanPlayThrough);
+    audio.addEventListener('loadstart', onLoadStart);
+    audio.addEventListener('progress', onProgress);
+    audio.addEventListener('suspend', onSuspend);
+    audio.addEventListener('abort', onAbort);
 
     // Force load metadata
     audio.load();
@@ -234,6 +271,12 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
       audio.removeEventListener('pause', onPause);
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('error', onError);
+      audio.removeEventListener('canplay', onCanPlay);
+      audio.removeEventListener('canplaythrough', onCanPlayThrough);
+      audio.removeEventListener('loadstart', onLoadStart);
+      audio.removeEventListener('progress', onProgress);
+      audio.removeEventListener('suspend', onSuspend);
+      audio.removeEventListener('abort', onAbort);
       
       stopProgressTracking();
       stopVisualization();
@@ -433,6 +476,46 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
     return audioLevels;
   }, [audioLevels]);
 
+  const resetAudioElement = useCallback(() => {
+    console.log('🔄 Force resetting audio element...');
+    
+    if (audioRef.current) {
+      const currentAudio = audioRef.current;
+      currentAudio.pause();
+      currentAudio.src = '';
+      audioRef.current = null;
+    }
+    
+    // Force reinitialization with correct source
+    const audio = new Audio('/sounds/floor_1_1.mp3');
+    audio.preload = 'auto';
+    audio.volume = 0.7;
+    audio.loop = true;
+    audio.crossOrigin = 'anonymous';
+    audio.autoplay = false;
+    
+    audioRef.current = audio;
+    
+    console.log('✅ Audio element reset with correct source:', audio.src);
+    
+    // Reattach basic event listeners
+    const onLoadedMetadata = () => {
+      const duration = audio.duration || 0;
+      console.log('📊 Reset audio metadata loaded:', duration);
+      durationRef.current = duration;
+      setAudioState(prev => ({
+        ...prev,
+        duration: duration,
+        isLoaded: duration > 0
+      }));
+    };
+    
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.load();
+    
+    return audio;
+  }, []);
+
   return {
     playDanceMusic,
     stopDanceMusic,
@@ -444,6 +527,7 @@ export const useNightclubMusic = (audioFile: string): UseNightclubMusicReturn =>
     toggleMusic,
     seekTo,
     getAudioLevels,
+    resetAudioElement,
     audioState
   };
 };

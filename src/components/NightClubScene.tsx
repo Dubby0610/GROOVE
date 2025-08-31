@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import ThreeNightClubScene from "./ThreeNightClubScene";
 import { LoadingScreen } from "./LoadingScreen";
 import { apiFetch } from "../utils/apiFetch";
-import { useNightclubMusic } from "../hooks/useNightclubMusic";
 
 // Floor labels (for future use)
 // const FLOOR_LABELS = [
@@ -18,16 +17,8 @@ interface NightClubSceneProps {
 }
 
 const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
-  // Nightclub music hook
-  const { 
-    playDanceMusic, 
-    stopDanceMusic, 
-    setVolume, 
-    getVolume, 
-    toggleMusic,
-    seekTo,
-    audioState 
-  } = useNightclubMusic('/sounds/floor_1_1.mp3');
+  // Simple audio reference like the working scenes
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   // Format time helper function
   const formatTime = (seconds: number): string => {
@@ -40,6 +31,10 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [timerStarted, setTimerStarted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.7);
   const timerRef = useRef<number | null>(null);
   const navigate = useNavigate();
 
@@ -64,29 +59,71 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
     setIsLoading(false);
     setTimerStarted(true);
     
-    // AUTO-START nightclub music with debugging
-    console.log('🎵 AUTO-STARTING nightclub music...');
-    console.log('🔍 Audio state before play:', audioState);
+    // Start music automatically like the working scenes
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.volume = volume;
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+        console.log('✅ Nightclub music started automatically!');
+      }).catch((error) => {
+        console.log('⚠️ Auto-play blocked, music will start on user interaction');
+      });
+    }
+  };
+
+  // Update time and duration for the music controller
+  useEffect(() => {
+    if (!audioRef.current) return;
     
-    // Immediate attempt
-    playDanceMusic();
+    const audio = audioRef.current;
     
-    // Check if it worked after a short delay
-    setTimeout(() => {
-      console.log('🔍 Audio state after play attempt:', audioState);
-      
-      if (!audioState.isPlaying) {
-        console.log('⚠️ Music not playing - adding click listener');
-        const startMusicOnClick = () => {
-          console.log('🖱️ User clicked - starting music manually');
-          playDanceMusic();
-          document.removeEventListener('click', startMusicOnClick);
-        };
-        document.addEventListener('click', startMusicOnClick);
-      } else {
-        console.log('✅ Music is playing successfully!');
-      }
-    }, 1000);
+    const updateTime = () => {
+      setCurrentTime(audio.currentTime);
+      setDuration(audio.duration || 0);
+    };
+    
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => setIsPlaying(false);
+    
+    audio.addEventListener('timeupdate', updateTime);
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('ended', onEnded);
+    
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime);
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('ended', onEnded);
+    };
+  }, []);
+
+  // Simple music control functions
+  const toggleMusic = () => {
+    if (!audioRef.current) return;
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+  };
+
+  const setMusicVolume = (newVolume: number) => {
+    const clampedVolume = Math.max(0, Math.min(1, newVolume));
+    setVolume(clampedVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = clampedVolume;
+    }
+  };
+
+  const seekTo = (timeInSeconds: number) => {
+    if (!audioRef.current || !duration) return;
+    
+    const clampedTime = Math.max(0, Math.min(timeInSeconds, duration));
+    audioRef.current.currentTime = clampedTime;
   };
 
   // Tick every minute to update backend and UI (only after models are loaded)
@@ -125,11 +162,12 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
   // Cleanup: stop music when component unmounts
   useEffect(() => {
     return () => {
-      stopDanceMusic();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
     };
-  }, [stopDanceMusic]);
-
-  // Removed complex autoplay handler - using simple button instead
+  }, []);
 
   // Handle manual logout
   const handleLogout = async () => {
@@ -138,20 +176,34 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
       // Only clear the timer and navigate to sign out
       if (timerRef.current) window.clearInterval(timerRef.current);
       setRemaining(0);
-      stopDanceMusic(); // Stop music when logging out
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       navigate('/sign-out', { state: { reason: 'manual_logout' } });
     } catch (error) {
       console.error('Error during manual logout:', error);
       // Ensure logout continues even if there's an error
       if (timerRef.current) window.clearInterval(timerRef.current);
       setRemaining(0);
-      stopDanceMusic();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       navigate('/sign-out', { state: { reason: 'manual_logout' } });
     }
   };
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
+      {/* Background music for nightclub - Simple approach like working scenes */}
+      <audio
+        ref={audioRef}
+        src="/sounds/floor_1_1.mp3"
+        loop
+        style={{ display: 'none' }}
+      />
+      
       <ThreeNightClubScene floor={floor} onLoaded={handleModelsLoaded} />
       {isLoading && (
         <LoadingScreen message="Loading your club experience..." />
@@ -164,115 +216,136 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
       
       {/* Music should start automatically now */}
 
+      {/* Manual Music Start Button - Only show if music isn't playing */}
+      {!isLoading && !isPlaying && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30">
+          <button
+            onClick={() => {
+              if (audioRef.current) {
+                audioRef.current.play();
+              }
+            }}
+            className="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-lg text-lg font-bold shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            🎵 Start Music Manually
+          </button>
+        </div>
+      )}
+
       {/* Beautiful Music Visualizer - Center Bottom */}
       {!isLoading && (
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30">
-              <div className="relative bg-black/25 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-2xl min-w-[360px] overflow-hidden">
-                         {/* Glowing border effect */}
-             <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 opacity-50 blur-sm" />
-             {/* Music Progress Bar */}
-             <div className="flex items-center justify-center gap-3 h-12">
-               {/* Current Time */}
+          <div className="relative bg-black/25 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-2xl min-w-[360px] overflow-hidden">
+            {/* Glowing border effect */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 opacity-50 blur-sm" />
+            
+            {/* Music Progress Bar */}
+            <div className="flex items-center justify-center gap-3 h-12">
+              {/* Current Time */}
               <div className="text-white/80 text-sm font-mono min-w-[40px] text-right">
-                {formatTime(audioState.currentTime)}
+                {formatTime(currentTime)}
               </div>
-               
-               {/* Progress Bar */}
-               <div className="relative flex-1 max-w-[200px]">
-                 <div 
-                   className="w-full h-2 bg-white/20 rounded-full overflow-hidden cursor-pointer relative"
-                   onClick={(e) => {
-                     const rect = e.currentTarget.getBoundingClientRect();
-                     const clickX = e.clientX - rect.left;
-                     const percentage = clickX / rect.width;
-                     const newTime = percentage * audioState.duration;
-                     if (newTime >= 0 && newTime <= audioState.duration) {
-                       seekTo(newTime);
-                     }
-                   }}
-                 >
-                   {/* Progress Fill */}
-                   <div 
-                     className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full transition-all duration-100 ease-out"
-                     style={{
-                       width: `${audioState.duration > 0 ? (audioState.currentTime / audioState.duration) * 100 : 0}%`
-                     }}
-                   />
-                 </div>
+                
+              {/* Progress Bar */}
+              <div className="relative flex-1 max-w-[200px]">
+                <div 
+                  className="w-full h-2 bg-white/20 rounded-full overflow-hidden cursor-pointer relative"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percentage = clickX / rect.width;
+                    const newTime = percentage * duration;
+                    if (newTime >= 0 && newTime <= duration) {
+                      seekTo(newTime);
+                    }
+                  }}
+                >
+                  {/* Progress Fill */}
+                  <div 
+                    className="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full transition-all duration-100 ease-out"
+                    style={{
+                      width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`
+                    }}
+                  />
+                </div>
                  
-                 {/* Progress Handle */}
-                 <div 
-                   className="absolute top-1/2 transform -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200 hover:bg-pink-200"
-                   style={{
-                     left: `${audioState.duration > 0 ? (audioState.currentTime / audioState.duration) * 100 : 0}%`,
-                     transform: 'translate(-50%, -50%)',
-                     boxShadow: '0 0 10px rgba(255, 255, 255, 0.5)'
-                   }}
-                 />
-               </div>
-               
-               {/* Total Duration */}
-              <div className="text-white/80 text-sm font-mono min-w-[40px] text-left">
-                {formatTime(audioState.duration)}
+                {/* Progress Handle */}
+                <div 
+                  className="absolute top-1/2 transform -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200 hover:bg-pink-200"
+                  style={{
+                    left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+                    transform: 'translate(-50%, -50%)',
+                    boxShadow: '0 0 10px rgba(255, 255, 255, 0.5)'
+                  }}
+                />
               </div>
-             </div>
-                         
-             {/* Professional Controls Row */}
-             <div className="flex items-center justify-center gap-4 mt-4">
-               {/* Enhanced Play/Pause Button */}
-               <button
-                 onClick={toggleMusic}
-                 className="group relative w-10 h-10 bg-gradient-to-r from-pink-500 via-purple-600 to-pink-600 hover:from-pink-600 hover:via-purple-700 hover:to-pink-700 rounded-full flex items-center justify-center text-white text-lg font-bold transition-all duration-300 transform hover:scale-110 shadow-2xl hover:shadow-purple-500/50"
-                 style={{
-                   boxShadow: '0 0 20px rgba(236, 72, 153, 0.3)'
-                 }}
-               >
-                 <div className="relative z-10">
-                   {audioState.isPlaying ? '⏸️' : '▶️'}
-                 </div>
-                 {/* Ripple effect */}
-                 <div className="absolute inset-0 rounded-full bg-white/20 scale-0 group-hover:scale-100 transition-transform duration-300" />
-               </button>
                
-               {/* Enhanced Volume Slider */}
-               <div className="flex items-center gap-3">
-                 <span className="text-white/80 text-sm">🔊</span>
-                 <div className="relative">
-                   <input
-                     type="range"
-                     min="0"
-                     max="1"
-                     step="0.01"
-                     value={getVolume()}
-                     onChange={(e) => setVolume(parseFloat(e.target.value))}
-                     className="w-20 h-2 bg-white/20 rounded-full appearance-none cursor-pointer slider"
-                     style={{
-                       background: `linear-gradient(to right, 
-                         #ec4899 0%, 
-                         #ec4899 ${getVolume() * 100}%, 
-                         rgba(255,255,255,0.3) ${getVolume() * 100}%, 
-                         rgba(255,255,255,0.3) 100%)`
-                     }}
-                   />
-                   {/* Volume level indicator */}
-                   <div className="absolute -bottom-5 left-0 text-center w-full">
-                     <span className="text-white/60 text-xs font-mono">
-                       {Math.round(getVolume() * 100)}%
-                     </span>
-                   </div>
-                 </div>
-               </div>
+              {/* Total Duration */}
+              <div className="text-white/80 text-sm font-mono min-w-[40px] text-left">
+                {formatTime(duration)}
+              </div>
+            </div>
+                        
+            {/* Professional Controls Row */}
+            <div className="flex items-center justify-center gap-4 mt-4">
+              {/* Enhanced Play/Pause Button */}
+              <button
+                onClick={toggleMusic}
+                className="group relative w-10 h-10 bg-gradient-to-r from-pink-500 via-purple-600 to-pink-600 hover:from-pink-600 hover:via-purple-700 hover:to-pink-700 rounded-full flex items-center justify-center text-white text-lg font-bold transition-all duration-300 transform hover:scale-110 shadow-2xl hover:shadow-purple-500/50"
+                style={{
+                  boxShadow: '0 0 20px rgba(236, 72, 153, 0.3)'
+                }}
+              >
+                <div className="relative z-10">
+                  {isPlaying ? '⏸️' : '▶️'}
+                </div>
+                {/* Ripple effect */}
+                <div className="absolute inset-0 rounded-full bg-white/20 scale-0 group-hover:scale-100 transition-transform duration-300" />
+              </button>
                
-                             {/* Enhanced Status Indicator */}
+              {/* Enhanced Volume Slider */}
+              <div className="flex items-center gap-3">
+                <span className="text-white/80 text-sm">🔊</span>
+                <div className="relative">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={volume}
+                    onChange={(e) => setMusicVolume(parseFloat(e.target.value))}
+                    className="w-20 h-2 bg-white/20 rounded-full appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, 
+                        #ec4899 0%, 
+                        #ec4899 ${volume * 100}%, 
+                        rgba(255,255,255,0.3) ${volume * 100}%, 
+                        rgba(255,255,255,0.3) 100%)`
+                    }}
+                  />
+                  {/* Volume level indicator */}
+                  <div className="absolute -bottom-5 left-0 text-center w-full">
+                    <span className="text-white/60 text-xs font-mono">
+                      {Math.round(volume * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+               
+              {/* Enhanced Status Indicator */}
               <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${audioState.isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'} shadow-lg`}></div>
+                <div className={`w-3 h-3 rounded-full ${isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-400'} shadow-lg`}></div>
                 <span className="text-white/80 text-sm font-semibold tracking-wide">
-                  {audioState.isPlaying ? 'LIVE' : 'PAUSED'}
+                  {isPlaying ? 'LIVE' : 'PAUSED'}
                 </span>
                 {/* Simple restart button if music stops */}
-                {!audioState.isPlaying && (
+                {!isPlaying && (
                   <button
-                    onClick={playDanceMusic}
+                    onClick={() => {
+                      if (audioRef.current) {
+                        audioRef.current.play();
+                      }
+                    }}
                     className="ml-2 px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition-colors"
                     title="Restart music"
                   >
@@ -280,12 +353,12 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
                   </button>
                 )}
               </div>
-             </div>
-                         
-             {/* Professional Floor Label */}
-             <div className="text-center mt-4">
-               <div className="text-white/70 text-sm font-medium">🎵 Live Music Experience</div>
-             </div>
+            </div>
+                        
+            {/* Professional Floor Label */}
+            <div className="text-center mt-4">
+              <div className="text-white/70 text-sm font-medium">🎵 Live Music Experience</div>
+            </div>
           </div>
         </div>
       )}
