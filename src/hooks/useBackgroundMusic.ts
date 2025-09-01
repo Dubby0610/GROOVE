@@ -30,6 +30,7 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
   // Initialize audio element
   useEffect(() => {
     if (!audioRef.current) {
+      console.log('Creating new audio element with file:', audioFile);
       audioRef.current = new Audio(audioFile);
       audioRef.current.preload = 'auto';
       audioRef.current.volume = 0.4;
@@ -37,6 +38,7 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
       
       // Set up audio event listeners
       audioRef.current.addEventListener('loadedmetadata', () => {
+        console.log('Audio metadata loaded, duration:', audioRef.current?.duration);
         setAudioState(prev => ({
           ...prev,
           isLoaded: true,
@@ -59,11 +61,13 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
       });
 
       audioRef.current.addEventListener('play', () => {
+        console.log('Audio play event fired');
         setAudioState(prev => ({ ...prev, isPlaying: true }));
         isPlayingRef.current = true;
       });
 
       audioRef.current.addEventListener('pause', () => {
+        console.log('Audio pause event fired');
         setAudioState(prev => ({ ...prev, isPlaying: false }));
         isPlayingRef.current = false;
       });
@@ -78,12 +82,56 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
   }, [audioFile]);
 
   const playBackgroundMusic = useCallback(() => {
-    if (!audioRef.current) return Promise.resolve();
+    if (!audioRef.current) {
+      console.log('Audio ref not available');
+      return Promise.resolve();
+    }
 
+    console.log('Audio element found, attempting to play...');
+    console.log('Audio readyState:', audioRef.current.readyState);
+    console.log('Audio src:', audioRef.current.src);
+    
+    // Wait for audio to be ready if it's not already
+    if (audioRef.current.readyState < 2) {
+      console.log('Audio not ready, waiting for canplay...');
+      return new Promise<void>((resolve, reject) => {
+        const handleCanPlay = () => {
+          if (audioRef.current) {
+            audioRef.current.removeEventListener('canplay', handleCanPlay);
+            audioRef.current.removeEventListener('error', handleError);
+            
+            audioRef.current.currentTime = 0;
+            audioRef.current.volume = audioState.volume;
+            
+            audioRef.current.play().then(() => {
+              console.log('Audio play() succeeded after waiting');
+              setAudioState(prev => ({ ...prev, isPlaying: true }));
+              isPlayingRef.current = true;
+              resolve();
+            }).catch(reject);
+          }
+        };
+        
+        const handleError = (e: Event) => {
+          if (audioRef.current) {
+            audioRef.current.removeEventListener('canplay', handleCanPlay);
+            audioRef.current.removeEventListener('error', handleError);
+          }
+          reject(e);
+        };
+        
+        if (audioRef.current) {
+          audioRef.current.addEventListener('canplay', handleCanPlay);
+          audioRef.current.addEventListener('error', handleError);
+        }
+      });
+    }
+    
     audioRef.current.currentTime = 0;
     audioRef.current.volume = audioState.volume;
     
     return audioRef.current.play().then(() => {
+      console.log('Audio play() succeeded');
       setAudioState(prev => ({ ...prev, isPlaying: true }));
       isPlayingRef.current = true;
     }).catch((error) => {

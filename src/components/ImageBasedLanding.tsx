@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useBackgroundMusic } from '../hooks/useBackgroundMusic';
+import { LoadingScreen } from './LoadingScreen';
 
 interface ImageBasedLandingProps {
 	onEnterGuestMode: () => void;
@@ -31,17 +31,12 @@ interface GlitterParticle {
 }
 
 export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGuestMode }) => {
-	// Background music hook
-	const { 
-		playBackgroundMusic, 
-		stopBackgroundMusic, 
-		setVolume, 
-		getVolume
-	} = useBackgroundMusic('/sounds/groove.mp3');
-	
 	const [sparkles, setSparkles] = useState<Sparkle[]>([]);
 	const [glitterParticles, setGlitterParticles] = useState<GlitterParticle[]>([]);
 	const [isMobile, setIsMobile] = useState(false);
+	const [isLoading, setIsLoading] = useState(true);
+	const [volume, setVolume] = useState(0.4);
+	const audioRef = React.useRef<HTMLAudioElement | null>(null);
 	const animationFrameRef = useRef<number>();
 	const lastTimeRef = useRef(0);
 
@@ -95,28 +90,25 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 		setGlitterParticles(newParticles);
 	}, [isMobile]);
 
-	// Auto-play background music like in alley scene
+	// Play music only after loading is complete (EXACTLY like alley scene)
 	useEffect(() => {
-		// Auto-play background music when component mounts
-		const startMusic = async () => {
-			try {
-				await playBackgroundMusic();
-			} catch (error) {
-				console.log('Auto-play prevented by browser, user interaction required');
-			}
-		};
-		
-		startMusic();
-		
-		// Cleanup: stop music when component unmounts
-		return () => {
-			stopBackgroundMusic();
-		};
-	}, [playBackgroundMusic, stopBackgroundMusic]);
+		if (!isLoading && audioRef.current) {
+			audioRef.current.currentTime = 0;
+			audioRef.current.volume = volume;
+			audioRef.current.play().catch(() => {});
+		}
+	}, [isLoading, volume]);
 
 	useEffect(() => {
 		generateSparkles();
 		generateGlitterParticles();
+		
+		// Simulate loading completion like alley scene
+		const timer = setTimeout(() => {
+			setIsLoading(false);
+		}, 1000);
+		
+		return () => clearTimeout(timer);
 	}, [generateSparkles, generateGlitterParticles]);
 
 	useEffect(() => {
@@ -193,7 +185,16 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 	};
 
 	return (
-		<div className="relative min-h-screen bg-black cursor-pointer flex items-center justify-center" onClick={onEnterGuestMode}>
+		<div className="relative w-full h-screen overflow-hidden bg-black cursor-pointer flex items-center justify-center" onClick={onEnterGuestMode}>
+			{/* Background music EXACTLY like alley scene */}
+			<audio
+				ref={audioRef}
+				src="/sounds/groove.mp3"
+				loop
+				autoPlay
+				style={{ display: 'none' }}
+			/>
+			{isLoading && <LoadingScreen message="Loading..." />}
 			{/* Full-screen white dots & sparkles overlay */}
 			<div className="absolute inset-0 pointer-events-none z-20">
 				{glitterParticles.map((particle) => (
@@ -249,19 +250,23 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 						min="0"
 						max="1"
 						step="0.1"
-						value={getVolume()}
+						value={volume}
 						onChange={(e) => {
 							e.stopPropagation();
-							setVolume(parseFloat(e.target.value));
+							const newVolume = parseFloat(e.target.value);
+							setVolume(newVolume);
+							if (audioRef.current) {
+								audioRef.current.volume = newVolume;
+							}
 						}}
 						onClick={(e) => e.stopPropagation()}
 						className="w-12 h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer slider"
 						style={{
-							background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${getVolume() * 100}%, #374151 ${getVolume() * 100}%, #374151 100%)`
+							background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${volume * 100}%, #374151 ${volume * 100}%, #374151 100%)`
 						}}
 					/>
 					<div className="text-purple-300 text-xs text-center">
-						{Math.round(getVolume() * 100)}%
+						{Math.round(volume * 100)}%
 					</div>
 					
 					{/* Music Status - Always showing as playing */}
