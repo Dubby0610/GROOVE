@@ -45,7 +45,6 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 	const [sparkles, setSparkles] = useState<Sparkle[]>([]);
 	const [glitterParticles, setGlitterParticles] = useState<GlitterParticle[]>([]);
 	const [isMobile, setIsMobile] = useState(false);
-
 	const animationFrameRef = useRef<number>();
 	const lastTimeRef = useRef(0);
 
@@ -101,24 +100,22 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 
 	// Start background music when component mounts
 	useEffect(() => {
-		// Try to play music immediately
-		playBackgroundMusic();
+		// Auto-play background music when component mounts
+		const startMusic = async () => {
+			try {
+				await playBackgroundMusic();
+			} catch (error) {
+				console.log('Auto-play prevented by browser, user interaction required');
+			}
+		};
+		
+		startMusic();
 		
 		// Cleanup: stop music when component unmounts
 		return () => {
 			stopBackgroundMusic();
 		};
 	}, [playBackgroundMusic, stopBackgroundMusic]);
-
-	// Handle click to start music if autoplay was blocked
-	const handleClick = useCallback(() => {
-		// If music is not playing, try to start it
-		if (!audioState.isPlaying) {
-			playBackgroundMusic();
-		}
-		// Then proceed with the original click handler
-		onEnterGuestMode();
-	}, [audioState.isPlaying, playBackgroundMusic, onEnterGuestMode]);
 
 	useEffect(() => {
 		generateSparkles();
@@ -199,7 +196,7 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 	};
 
 	return (
-		<div className="relative min-h-screen bg-black cursor-pointer flex items-center justify-center" onClick={handleClick}>
+		<div className="relative min-h-screen bg-black cursor-pointer flex items-center justify-center" onClick={onEnterGuestMode}>
 			{/* Full-screen white dots & sparkles overlay */}
 			<div className="absolute inset-0 pointer-events-none z-20">
 				{glitterParticles.map((particle) => (
@@ -300,13 +297,6 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 			<div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/70 text-sm md:text-base z-30 select-none animate-flicker">
 				Click anywhere to enter
 			</div>
-
-			{/* Music autoplay indicator */}
-			{!audioState.isPlaying && audioState.isLoaded && (
-				<div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-purple-300 text-xs z-30 select-none animate-pulse">
-					🎵 Click to start music
-				</div>
-			)}
 		</div>
 	);
 };
