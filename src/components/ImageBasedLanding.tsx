@@ -35,11 +35,8 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 	const { 
 		playBackgroundMusic, 
 		stopBackgroundMusic, 
-		pauseBackgroundMusic, 
-		resumeBackgroundMusic,
 		setVolume, 
-		getVolume, 
-		audioState 
+		getVolume
 	} = useBackgroundMusic('/sounds/groove.mp3');
 	
 	const [sparkles, setSparkles] = useState<Sparkle[]>([]);
@@ -98,7 +95,7 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 		setGlitterParticles(newParticles);
 	}, [isMobile]);
 
-	// Start background music when component mounts
+	// Auto-play background music like in alley scene
 	useEffect(() => {
 		// Auto-play background music when component mounts
 		const startMusic = async () => {
@@ -240,25 +237,10 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 				<img src="/imgs/landing.png" alt="Nightclub Landing" className="absolute inset-0 w-full h-full object-contain" />
 			</div>
 
-			{/* Music Controls */}
+			{/* Volume Control Only */}
 			<div className="absolute top-4 right-4 z-30">
 				<div className="bg-black/80 backdrop-blur-md rounded-xl p-2 border border-purple-500/50 shadow-2xl">
 					<div className="text-purple-300 text-xs font-semibold mb-1 text-center tracking-wider">🎵</div>
-					
-					{/* Play/Pause Button */}
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							if (audioState.isPlaying) {
-								pauseBackgroundMusic();
-							} else {
-								resumeBackgroundMusic();
-							}
-						}}
-						className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-all duration-200 mb-1 shadow-lg hover:shadow-purple-500/50 mx-auto"
-					>
-						{audioState.isPlaying ? '⏸️' : '▶️'}
-					</button>
 					
 					{/* Volume Control */}
 					<div className="text-purple-300 text-xs mb-1 text-center">Vol</div>
@@ -282,13 +264,9 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 						{Math.round(getVolume() * 100)}%
 					</div>
 					
-					{/* Music Status */}
+					{/* Music Status - Always showing as playing */}
 					<div className="text-center mt-1">
-						{audioState.isLoaded ? (
-							<div className={`w-1.5 h-1.5 rounded-full mx-auto ${audioState.isPlaying ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50' : 'bg-purple-400'}`}></div>
-						) : (
-							<div className="w-1.5 h-1.5 rounded-full mx-auto bg-gray-400"></div>
-						)}
+						<div className="w-1.5 h-1.5 rounded-full mx-auto bg-green-400 animate-pulse shadow-lg shadow-green-400/50"></div>
 					</div>
 				</div>
 			</div>
