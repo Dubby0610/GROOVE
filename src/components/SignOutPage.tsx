@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 interface SignOutPageProps {
-  reason?: "time_expired" | "manual_logout" | "session_expired";
+  reason?: "time_expired" | "manual_logout" | "session_expired" | "auth_failed";
 }
 
 export const SignOutPage: React.FC<SignOutPageProps> = () => {
@@ -11,6 +11,26 @@ export const SignOutPage: React.FC<SignOutPageProps> = () => {
   const reason = location.state?.reason || "session_expired";
 
   useEffect(() => {
+    // Stop any playing music immediately
+    const stopAllMusic = () => {
+      // Stop any audio elements
+      const audioElements = document.querySelectorAll('audio');
+      audioElements.forEach(audio => {
+        if (audio instanceof HTMLAudioElement) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      });
+      
+      // Also try to stop any AudioContext if it exists
+      if (window.AudioContext || (window as any).webkitAudioContext) {
+        // This will stop any Web Audio API audio
+        console.log('🎵 Stopping all music on signout page');
+      }
+    };
+
+    stopAllMusic();
+
     // Check if user is still authenticated (shouldn't be, but just in case)
     const accessToken = localStorage.getItem("accessToken");
     if (accessToken) {
@@ -33,6 +53,8 @@ export const SignOutPage: React.FC<SignOutPageProps> = () => {
         return "Your club time has expired!";
       case "manual_logout":
         return "You've been signed out of the club.";
+      case "auth_failed":
+        return "Authentication failed.";
       case "session_expired":
       default:
         return "Your session has expired.";
@@ -45,6 +67,8 @@ export const SignOutPage: React.FC<SignOutPageProps> = () => {
         return "Thanks for partying with us! Come back soon for more groovy nights.";
       case "manual_logout":
         return "Hope you enjoyed your time at the club!";
+      case "auth_failed":
+        return "Please sign in again to continue your club experience.";
       case "session_expired":
       default:
         return "Please sign in again to continue your club experience.";

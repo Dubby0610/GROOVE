@@ -37,6 +37,8 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
   const [volume, setVolume] = useState(0.7);
   const timerRef = useRef<number | null>(null);
   const navigate = useNavigate();
+  const [authWarning, setAuthWarning] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Fetch subscription on mount to get remaining time for hourly plan
   useEffect(() => {
@@ -139,18 +141,75 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ minutes: 1 })
         });
+        
         if (res.ok) {
           const data = await res.json();
           const newRemaining = data.remaining_time_seconds;
           setRemaining(newRemaining);
+          setAuthWarning(false); // Clear warning on success
           
           // Auto-logout when time reaches 0
           if (newRemaining <= 0) {
             if (timerRef.current) window.clearInterval(timerRef.current);
             navigate('/sign-out', { state: { reason: 'time_expired' } });
           }
+        } else if (res.status === 401 || res.status === 403) {
+          // Authentication error - show warning and try to refresh token
+          console.log('🔄 Authentication error, attempting token refresh...');
+          setAuthWarning(true);
+          
+          try {
+            // Wait a bit for token refresh to complete
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Retry the request
+            const retryRes = await apiFetch(`/payment/update-remaining`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ minutes: 1 })
+            });
+            
+            if (retryRes.ok) {
+              const data = await retryRes.json();
+              const newRemaining = data.remaining_time_seconds;
+              setRemaining(newRemaining);
+              setAuthWarning(false); // Clear warning on success
+              
+              if (newRemaining <= 0) {
+                if (timerRef.current) window.clearInterval(timerRef.current);
+                navigate('/sign-out', { state: { reason: 'time_expired' } });
+              }
+            } else {
+              // Still failing after refresh, redirect to login
+              console.error('❌ Authentication failed after token refresh');
+              setAuthWarning(false);
+              if (timerRef.current) window.clearInterval(timerRef.current);
+              navigate('/sign-out', { state: { reason: 'auth_failed' } });
+            }
+          } catch (refreshError) {
+            console.error('❌ Token refresh failed:', refreshError);
+            setAuthWarning(false);
+            if (timerRef.current) window.clearInterval(timerRef.current);
+            navigate('/sign-out', { state: { reason: 'auth_failed' } });
+          }
+        } else {
+          console.error('❌ Payment update failed:', res.status, res.statusText);
+          // Don't stop the timer for other errors, just log them
         }
-      } catch {}
+      } catch (error) {
+        console.error('❌ Timer tick error:', error);
+        
+        // Check if it's an authentication error
+        if (error instanceof Error && error.message.includes('Authentication failed')) {
+          console.log('🔄 Authentication error detected, redirecting to login...');
+          setAuthWarning(false);
+          if (timerRef.current) window.clearInterval(timerRef.current);
+          navigate('/sign-out', { state: { reason: 'auth_failed' } });
+        } else {
+          // For other errors, just log but don't stop the timer
+          console.log('⚠️ Non-critical error, continuing timer...');
+        }
+      }
     };
     
     timerRef.current = window.setInterval(tick, 60 * 1000) as unknown as number;
@@ -180,7 +239,7 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
-      navigate('/sign-out', { state: { reason: 'manual_logout' } });
+      setShowLogoutConfirm(true);
     } catch (error) {
       console.error('Error during manual logout:', error);
       // Ensure logout continues even if there's an error
@@ -190,7 +249,22 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
-      navigate('/sign-out', { state: { reason: 'manual_logout' } });
+      setShowLogoutConfirm(true);
+    }
+  };
+
+  const handleConfirmedLogout = async () => {
+    try {
+      const res = await apiFetch(`/auth/sign-out`, { method: "POST" });
+      if (res.ok) {
+        navigate('/sign-in');
+      } else {
+        console.error('❌ Sign out failed:', res.status, res.statusText);
+        // Optionally show an error message to the user
+      }
+    } catch (error) {
+      console.error('❌ Sign out failed:', error);
+      // Optionally show an error message to the user
     }
   };
 
@@ -211,6 +285,13 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
       {remaining !== null && timerStarted && (
         <div className="absolute top-6 right-6 bg-black/50 text-white px-4 py-2 rounded-lg text-sm">
           Time left: {Math.max(0, Math.floor(remaining / 60))}m
+        </div>
+      )}
+      
+      {/* Authentication Warning */}
+      {authWarning && (
+        <div className="absolute top-16 right-6 bg-orange-600/80 text-white px-4 py-2 rounded-lg text-sm animate-pulse">
+          ⚠️ Authentication issue detected
         </div>
       )}
       
@@ -336,6 +417,37 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
       >
         Logout
       </button>
+
+      {/* Logout Confirmation Dialog */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-black/80 border border-white/20 rounded-2xl p-6 max-w-md mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="text-4xl mb-4">🚪</div>
+              <h3 className="text-xl font-bold text-white mb-4">
+                Leave the Club?
+              </h3>
+              <p className="text-white/80 mb-6">
+                Are you sure you want to sign out? Your session will end and you'll need to sign in again.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmedLogout}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
