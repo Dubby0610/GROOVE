@@ -49,14 +49,6 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
         }
       });
 
-      // Also try to play when the audio can play through
-      audioRef.current.addEventListener('canplaythrough', () => {
-        // Only auto-play if not already playing
-        if (!isPlayingRef.current && document.readyState === 'complete') {
-          audioRef.current?.play().catch(console.error);
-        }
-      });
-
       audioRef.current.addEventListener('ended', () => {
         // For looped audio, this won't fire, but just in case
         if (audioRef.current && audioRef.current.loop) {
@@ -147,9 +139,6 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
   const resumeBackgroundMusic = useCallback(() => {
     if (!audioRef.current) return;
 
-    // Ensure volume is set correctly
-    audioRef.current.volume = audioState.volume;
-    
     audioRef.current.play().then(() => {
       setAudioState(prev => ({ ...prev, isPlaying: true }));
       isPlayingRef.current = true;
@@ -157,15 +146,8 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
       console.error('Failed to resume background music:', error);
       setAudioState(prev => ({ ...prev, isPlaying: false }));
       isPlayingRef.current = false;
-      
-      // Try again after a short delay if it failed
-      setTimeout(() => {
-        if (audioRef.current && !isPlayingRef.current) {
-          audioRef.current.play().catch(console.error);
-        }
-      }, 500);
     });
-  }, [audioState.volume]);
+  }, []);
 
   const setVolume = useCallback((volume: number) => {
     const clampedVolume = Math.max(0, Math.min(1, volume));

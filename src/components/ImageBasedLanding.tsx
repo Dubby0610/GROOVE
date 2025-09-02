@@ -105,7 +105,6 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 	useEffect(() => {
 		// Add a small delay to ensure audio is properly initialized
 		const timer = setTimeout(() => {
-			// First try to play, then use resume for subsequent calls
 			playBackgroundMusic();
 		}, 100);
 		
@@ -115,35 +114,6 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 			stopBackgroundMusic();
 		};
 	}, [playBackgroundMusic, stopBackgroundMusic]);
-
-	// Auto-resume music when audio is loaded and ready
-	useEffect(() => {
-		if (audioState.isLoaded && !audioState.isPlaying) {
-			const resumeTimer = setTimeout(() => {
-				resumeBackgroundMusic();
-			}, 200);
-			
-			return () => clearTimeout(resumeTimer);
-		}
-	}, [audioState.isLoaded, audioState.isPlaying, resumeBackgroundMusic]);
-
-	// Additional auto-resume for when the page becomes visible
-	useEffect(() => {
-		const handleVisibilityChange = () => {
-			if (!document.hidden && audioState.isLoaded && !audioState.isPlaying) {
-				// Page is visible and audio is loaded but not playing, resume it
-				setTimeout(() => {
-					resumeBackgroundMusic();
-				}, 100);
-			}
-		};
-
-		document.addEventListener('visibilitychange', handleVisibilityChange);
-		
-		return () => {
-			document.removeEventListener('visibilitychange', handleVisibilityChange);
-		};
-	}, [audioState.isLoaded, audioState.isPlaying, resumeBackgroundMusic]);
 
 	useEffect(() => {
 		generateSparkles();
