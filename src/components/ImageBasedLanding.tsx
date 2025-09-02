@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { LoadingScreen } from './LoadingScreen';
+import { useBackgroundMusic } from '../hooks/useBackgroundMusic';
 
 interface ImageBasedLandingProps {
 	onEnterGuestMode: () => void;
@@ -31,12 +31,23 @@ interface GlitterParticle {
 }
 
 export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGuestMode }) => {
+	// Background music hook
+	const { 
+		playBackgroundMusic, 
+		stopBackgroundMusic, 
+		pauseBackgroundMusic, 
+		resumeBackgroundMusic,
+		setVolume, 
+		getVolume, 
+		audioState 
+	} = useBackgroundMusic('/sounds/groove.mp3');
+	
 	const [sparkles, setSparkles] = useState<Sparkle[]>([]);
 	const [glitterParticles, setGlitterParticles] = useState<GlitterParticle[]>([]);
 	const [isMobile, setIsMobile] = useState(false);
-	const [isLoading, setIsLoading] = useState(true);
-	const [volume, setVolume] = useState(0.4);
-	const audioRef = React.useRef<HTMLAudioElement | null>(null);
+	const [showMusicControls, setShowMusicControls] = useState(false);
+	const [isVolumeDragging, setIsVolumeDragging] = useState(false);
+	const [volumeHover, setVolumeHover] = useState(false);
 	const animationFrameRef = useRef<number>();
 	const lastTimeRef = useRef(0);
 
@@ -90,25 +101,53 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 		setGlitterParticles(newParticles);
 	}, [isMobile]);
 
-	// Play music only after loading is complete (EXACTLY like alley scene)
+	// Start background music when component mounts
 	useEffect(() => {
-		if (!isLoading && audioRef.current) {
-			audioRef.current.currentTime = 0;
-			audioRef.current.volume = volume;
-			audioRef.current.play().catch(() => {});
+		// Add a small delay to ensure audio is properly initialized
+		const timer = setTimeout(() => {
+			// First try to play, then use resume for subsequent calls
+			playBackgroundMusic();
+		}, 100);
+		
+		// Cleanup: stop music when component unmounts
+		return () => {
+			clearTimeout(timer);
+			stopBackgroundMusic();
+		};
+	}, [playBackgroundMusic, stopBackgroundMusic]);
+
+	// Auto-resume music when audio is loaded and ready
+	useEffect(() => {
+		if (audioState.isLoaded && !audioState.isPlaying) {
+			const resumeTimer = setTimeout(() => {
+				resumeBackgroundMusic();
+			}, 200);
+			
+			return () => clearTimeout(resumeTimer);
 		}
-	}, [isLoading, volume]);
+	}, [audioState.isLoaded, audioState.isPlaying, resumeBackgroundMusic]);
+
+	// Additional auto-resume for when the page becomes visible
+	useEffect(() => {
+		const handleVisibilityChange = () => {
+			if (!document.hidden && audioState.isLoaded && !audioState.isPlaying) {
+				// Page is visible and audio is loaded but not playing, resume it
+				setTimeout(() => {
+					resumeBackgroundMusic();
+				}, 100);
+			}
+		};
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		
+		return () => {
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [audioState.isLoaded, audioState.isPlaying, resumeBackgroundMusic]);
 
 	useEffect(() => {
 		generateSparkles();
 		generateGlitterParticles();
-		
-		// Simulate loading completion like alley scene
-		const timer = setTimeout(() => {
-			setIsLoading(false);
-		}, 1000);
-		
-		return () => clearTimeout(timer);
 	}, [generateSparkles, generateGlitterParticles]);
 
 	useEffect(() => {
@@ -184,17 +223,43 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 		}
 	};
 
+	// Handle main container click
+	const handleMainClick = (e: React.MouseEvent) => {
+		// Only navigate if the click is not on the music controls
+		if (!(e.target as Element).closest('.music-controls')) {
+			onEnterGuestMode();
+		}
+	};
+
+	// Enhanced volume control handlers
+	const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		e.stopPropagation();
+		const newVolume = parseFloat(e.target.value);
+		setVolume(newVolume);
+	};
+
+	const handleVolumeMouseDown = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		setIsVolumeDragging(true);
+	};
+
+	const handleVolumeMouseUp = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		setIsVolumeDragging(false);
+	};
+
+	const handleVolumeTouchStart = (e: React.TouchEvent) => {
+		e.stopPropagation();
+		setIsVolumeDragging(true);
+	};
+
+	const handleVolumeTouchEnd = (e: React.TouchEvent) => {
+		e.stopPropagation();
+		setIsVolumeDragging(false);
+	};
+
 	return (
-		<div className="relative w-full h-screen overflow-hidden bg-black cursor-pointer flex items-center justify-center" onClick={onEnterGuestMode}>
-			{/* Background music EXACTLY like alley scene */}
-			<audio
-				ref={audioRef}
-				src="/sounds/groove.mp3"
-				loop
-				autoPlay
-				style={{ display: 'none' }}
-			/>
-			{isLoading && <LoadingScreen message="Loading..." />}
+		<div className="relative min-h-screen bg-black cursor-pointer flex items-center justify-center" onClick={handleMainClick}>
 			{/* Full-screen white dots & sparkles overlay */}
 			<div className="absolute inset-0 pointer-events-none z-20">
 				{glitterParticles.map((particle) => (
@@ -238,40 +303,65 @@ export const ImageBasedLanding: React.FC<ImageBasedLandingProps> = ({ onEnterGue
 				<img src="/imgs/landing.png" alt="Nightclub Landing" className="absolute inset-0 w-full h-full object-contain" />
 			</div>
 
-			{/* Volume Control Only */}
-			<div className="absolute top-4 right-4 z-30">
-				<div className="bg-black/80 backdrop-blur-md rounded-xl p-2 border border-purple-500/50 shadow-2xl">
+			{/* Enhanced Music Controls */}
+			<div className="absolute top-4 right-4 z-30 music-controls" onClick={(e) => e.stopPropagation()}>
+				<div className={`bg-black/80 backdrop-blur-md rounded-xl p-2 border border-purple-500/50 shadow-2xl transition-all duration-300 ${volumeHover ? 'scale-105 shadow-purple-500/30' : ''}`}>
 					<div className="text-purple-300 text-xs font-semibold mb-1 text-center tracking-wider">🎵</div>
 					
-					{/* Volume Control */}
-					<div className="text-purple-300 text-xs mb-1 text-center">Vol</div>
-					<input
-						type="range"
-						min="0"
-						max="1"
-						step="0.1"
-						value={volume}
-						onChange={(e) => {
+					{/* Enhanced Play/Pause Button */}
+					<button
+						onClick={(e) => {
 							e.stopPropagation();
-							const newVolume = parseFloat(e.target.value);
-							setVolume(newVolume);
-							if (audioRef.current) {
-								audioRef.current.volume = newVolume;
+							if (audioState.isPlaying) {
+								pauseBackgroundMusic();
+							} else {
+								resumeBackgroundMusic();
 							}
 						}}
-						onClick={(e) => e.stopPropagation()}
-						className="w-12 h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer slider"
-						style={{
-							background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${volume * 100}%, #374151 ${volume * 100}%, #374151 100%)`
-						}}
-					/>
-					<div className="text-purple-300 text-xs text-center">
-						{Math.round(volume * 100)}%
+						className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-all duration-200 mb-1 shadow-lg hover:shadow-purple-500/50 mx-auto transform hover:scale-110 active:scale-95"
+					>
+						{audioState.isPlaying ? '⏸️' : '▶️'}
+					</button>
+					
+					{/* Enhanced Volume Control */}
+					<div className="text-purple-300 text-xs mb-1 text-center">Vol</div>
+					<div 
+						className="relative"
+						onMouseEnter={() => setVolumeHover(true)}
+						onMouseLeave={() => setVolumeHover(false)}
+					>
+						<input
+							type="range"
+							min="0"
+							max="1"
+							step="0.01"
+							value={getVolume()}
+							onChange={handleVolumeChange}
+							onClick={(e) => e.stopPropagation()}
+							onMouseDown={handleVolumeMouseDown}
+							onMouseUp={handleVolumeMouseUp}
+							onTouchStart={handleVolumeTouchStart}
+							onTouchEnd={handleVolumeTouchEnd}
+							className={`w-12 h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer slider transition-all duration-200 ${isVolumeDragging ? 'scale-110' : ''}`}
+							style={{
+								background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${getVolume() * 100}%, #374151 ${getVolume() * 100}%, #374151 100%)`
+							}}
+						/>
+						{/* Volume level indicator with smooth animation */}
+						<div className="text-purple-300 text-xs text-center mt-1 transition-all duration-200">
+							<span className={`font-mono ${isVolumeDragging ? 'text-pink-400 scale-110' : ''}`}>
+								{Math.round(getVolume() * 100)}%
+							</span>
+						</div>
 					</div>
 					
-					{/* Music Status - Always showing as playing */}
+					{/* Enhanced Music Status */}
 					<div className="text-center mt-1">
-						<div className="w-1.5 h-1.5 rounded-full mx-auto bg-green-400 animate-pulse shadow-lg shadow-green-400/50"></div>
+						{audioState.isLoaded ? (
+							<div className={`w-1.5 h-1.5 rounded-full mx-auto transition-all duration-300 ${audioState.isPlaying ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50' : 'bg-purple-400'}`}></div>
+						) : (
+							<div className="w-1.5 h-1.5 rounded-full mx-auto bg-gray-400"></div>
+						)}
 					</div>
 				</div>
 			</div>

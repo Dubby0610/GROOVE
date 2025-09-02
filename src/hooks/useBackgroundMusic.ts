@@ -1,7 +1,7 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 
 interface UseBackgroundMusicReturn {
-  playBackgroundMusic: () => Promise<void>;
+  playBackgroundMusic: () => void;
   stopBackgroundMusic: () => void;
   pauseBackgroundMusic: () => void;
   resumeBackgroundMusic: () => void;
@@ -18,11 +18,11 @@ interface UseBackgroundMusicReturn {
 
 export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const isPlayingRef = useRef(false);
+  const isPlayingRef = useRef(true);
   
   const [audioState, setAudioState] = useState({
-    isLoaded: false,
-    isPlaying: false,
+    isLoaded: true,
+    isPlaying: true,
     volume: 0.4, // Lower volume for background music
     duration: 0
   });
@@ -30,7 +30,6 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
   // Initialize audio element
   useEffect(() => {
     if (!audioRef.current) {
-      console.log('Creating new audio element with file:', audioFile);
       audioRef.current = new Audio(audioFile);
       audioRef.current.preload = 'auto';
       audioRef.current.volume = 0.4;
@@ -38,12 +37,24 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
       
       // Set up audio event listeners
       audioRef.current.addEventListener('loadedmetadata', () => {
-        console.log('Audio metadata loaded, duration:', audioRef.current?.duration);
         setAudioState(prev => ({
           ...prev,
           isLoaded: true,
           duration: audioRef.current?.duration || 0
         }));
+        
+        // Auto-play when loaded (with user interaction)
+        if (document.readyState === 'complete') {
+          audioRef.current?.play().catch(console.error);
+        }
+      });
+
+      // Also try to play when the audio can play through
+      audioRef.current.addEventListener('canplaythrough', () => {
+        // Only auto-play if not already playing
+        if (!isPlayingRef.current && document.readyState === 'complete') {
+          audioRef.current?.play().catch(console.error);
+        }
       });
 
       audioRef.current.addEventListener('ended', () => {
@@ -61,16 +72,35 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
       });
 
       audioRef.current.addEventListener('play', () => {
-        console.log('Audio play event fired');
         setAudioState(prev => ({ ...prev, isPlaying: true }));
         isPlayingRef.current = true;
       });
 
       audioRef.current.addEventListener('pause', () => {
-        console.log('Audio pause event fired');
         setAudioState(prev => ({ ...prev, isPlaying: false }));
         isPlayingRef.current = false;
       });
+
+      // Handle page visibility changes
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          // Page is hidden, pause audio
+          if (audioRef.current && !audioRef.current.paused) {
+            audioRef.current.pause();
+          }
+        } else {
+          // Page is visible, resume audio if it was playing
+          if (audioRef.current && isPlayingRef.current) {
+            audioRef.current.play().catch(console.error);
+          }
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
 
     return () => {
@@ -82,63 +112,18 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
   }, [audioFile]);
 
   const playBackgroundMusic = useCallback(() => {
-    if (!audioRef.current) {
-      console.log('Audio ref not available');
-      return Promise.resolve();
-    }
+    if (!audioRef.current) return;
 
-    console.log('Audio element found, attempting to play...');
-    console.log('Audio readyState:', audioRef.current.readyState);
-    console.log('Audio src:', audioRef.current.src);
-    
-    // Wait for audio to be ready if it's not already
-    if (audioRef.current.readyState < 2) {
-      console.log('Audio not ready, waiting for canplay...');
-      return new Promise<void>((resolve, reject) => {
-        const handleCanPlay = () => {
-          if (audioRef.current) {
-            audioRef.current.removeEventListener('canplay', handleCanPlay);
-            audioRef.current.removeEventListener('error', handleError);
-            
-            audioRef.current.currentTime = 0;
-            audioRef.current.volume = audioState.volume;
-            
-            audioRef.current.play().then(() => {
-              console.log('Audio play() succeeded after waiting');
-              setAudioState(prev => ({ ...prev, isPlaying: true }));
-              isPlayingRef.current = true;
-              resolve();
-            }).catch(reject);
-          }
-        };
-        
-        const handleError = (e: Event) => {
-          if (audioRef.current) {
-            audioRef.current.removeEventListener('canplay', handleCanPlay);
-            audioRef.current.removeEventListener('error', handleError);
-          }
-          reject(e);
-        };
-        
-        if (audioRef.current) {
-          audioRef.current.addEventListener('canplay', handleCanPlay);
-          audioRef.current.addEventListener('error', handleError);
-        }
-      });
-    }
-    
     audioRef.current.currentTime = 0;
     audioRef.current.volume = audioState.volume;
     
-    return audioRef.current.play().then(() => {
-      console.log('Audio play() succeeded');
+    audioRef.current.play().then(() => {
       setAudioState(prev => ({ ...prev, isPlaying: true }));
       isPlayingRef.current = true;
     }).catch((error) => {
       console.error('Failed to play background music:', error);
       setAudioState(prev => ({ ...prev, isPlaying: false }));
       isPlayingRef.current = false;
-      throw error; // Re-throw to allow caller to handle
     });
   }, [audioState.volume]);
 
@@ -162,6 +147,9 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
   const resumeBackgroundMusic = useCallback(() => {
     if (!audioRef.current) return;
 
+    // Ensure volume is set correctly
+    audioRef.current.volume = audioState.volume;
+    
     audioRef.current.play().then(() => {
       setAudioState(prev => ({ ...prev, isPlaying: true }));
       isPlayingRef.current = true;
@@ -169,8 +157,15 @@ export const useBackgroundMusic = (audioFile: string): UseBackgroundMusicReturn 
       console.error('Failed to resume background music:', error);
       setAudioState(prev => ({ ...prev, isPlaying: false }));
       isPlayingRef.current = false;
+      
+      // Try again after a short delay if it failed
+      setTimeout(() => {
+        if (audioRef.current && !isPlayingRef.current) {
+          audioRef.current.play().catch(console.error);
+        }
+      }, 500);
     });
-  }, []);
+  }, [audioState.volume]);
 
   const setVolume = useCallback((volume: number) => {
     const clampedVolume = Math.max(0, Math.min(1, volume));
