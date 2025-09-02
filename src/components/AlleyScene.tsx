@@ -10,7 +10,8 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   const [flickerState, setFlickerState] = useState(true);
   const [steamOpacity, setSteamOpacity] = useState(0.6);
   const [isLoading, setIsLoading] = useState(true);
-  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const audioRef1 = React.useRef<HTMLAudioElement | null>(null);
+  const audioRef2 = React.useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     // Neon sign flickering animation
@@ -27,28 +28,49 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       clearInterval(flickerInterval);
       clearInterval(steamInterval);
       // Stop background music
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+      if (audioRef1.current) {
+        audioRef1.current.pause();
+        audioRef1.current.currentTime = 0;
+      }
+      if (audioRef2.current) {
+        audioRef2.current.pause();
+        audioRef2.current.currentTime = 0;
       }
     };
   }, []);
 
   // Play music only after loading is complete
   useEffect(() => {
-    if (!isLoading && audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.volume = 0.2;
-      audioRef.current.play().catch(() => {});
+    if (!isLoading) {
+      // Play first background track (bbc_new-york.mp3)
+      if (audioRef1.current) {
+        audioRef1.current.currentTime = 0;
+        audioRef1.current.volume = 0.15; // Slightly lower volume for ambient background
+        audioRef1.current.play().catch(() => {});
+      }
+      
+      // Play second background track (Walking_groove_in_alley.mp3)
+      if (audioRef2.current) {
+        audioRef2.current.currentTime = 0;
+        audioRef2.current.volume = 0.15; // Higher volume for the walking groove
+        audioRef2.current.play().catch(() => {});
+      }
     }
   }, [isLoading]);
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gradient-to-b from-purple-900/30 to-black">
-      {/* Background music for alley */}
+      {/* Background music for alley - Multiple tracks */}
       <audio
-        ref={audioRef}
+        ref={audioRef1}
         src="/sounds/bbc_new-york.mp3"
+        loop
+        autoPlay
+        style={{ display: 'none' }}
+      />
+      <audio
+        ref={audioRef2}
+        src="/sounds/Walking_groove_in_alley.mp3"
         loop
         autoPlay
         style={{ display: 'none' }}

@@ -78,7 +78,8 @@ function AppRoutes() {
       setLoadingMessage(undefined);
       setLoadingAudioFile(undefined);
       navigate('/club-success');
-      setTimeout(() => setIsDeterminingFloor(false), 1000); // Show loading for 1s after navigation
+      // Allow full 7-second audio playback before transitioning to club scene
+      setTimeout(() => setIsDeterminingFloor(false), 8000); // Show loading for 8s to allow full audio
     }, 2000);
   };
 

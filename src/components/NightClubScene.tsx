@@ -68,7 +68,7 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
       audioRef.current.play().then(() => {
         setIsPlaying(true);
         console.log('✅ Nightclub music started automatically!');
-      }).catch((error) => {
+      }).catch(() => {
         console.log('⚠️ Auto-play blocked, music will start on user interaction');
       });
     }
@@ -229,42 +229,50 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
   }, []);
 
   // Handle manual logout
-  const handleLogout = async () => {
-    try {
-      // For manual logout, we don't cancel the subscription - it should remain active
-      // Only clear the timer and navigate to sign out
-      if (timerRef.current) window.clearInterval(timerRef.current);
-      setRemaining(0);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      setShowLogoutConfirm(true);
-    } catch (error) {
-      console.error('Error during manual logout:', error);
-      // Ensure logout continues even if there's an error
-      if (timerRef.current) window.clearInterval(timerRef.current);
-      setRemaining(0);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      setShowLogoutConfirm(true);
-    }
+  const handleLogout = () => {
+    // Just show the confirmation dialog - don't clear any data yet
+    setShowLogoutConfirm(true);
   };
 
   const handleConfirmedLogout = async () => {
     try {
-      const res = await apiFetch(`/auth/sign-out`, { method: "POST" });
-      if (res.ok) {
-        navigate('/sign-in');
-      } else {
-        console.error('❌ Sign out failed:', res.status, res.statusText);
-        // Optionally show an error message to the user
+      // Stop all audio aggressively
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current.src = ''; // Clear source to prevent browser media controls
+        audioRef.current.load();
       }
+      
+      // Stop any global audio references
+      if ((window as any).djBarryAudio) {
+        (window as any).djBarryAudio.pause();
+        (window as any).djBarryAudio.currentTime = 0;
+        (window as any).djBarryAudio.src = '';
+        (window as any).djBarryAudio = null;
+      }
+      
+      // Clear media session metadata
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
+      }
+      
+      // Clear the timer
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+      }
+      
+      // Clear local storage and session data
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Navigate to sign-out page
+      navigate('/sign-out', { state: { reason: 'manual_logout' } });
     } catch (error) {
       console.error('❌ Sign out failed:', error);
-      // Optionally show an error message to the user
+      // Even if there's an error, still navigate to sign-out page
+      navigate('/sign-out', { state: { reason: 'manual_logout' } });
     }
   };
 

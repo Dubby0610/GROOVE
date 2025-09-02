@@ -4,6 +4,7 @@ import ThreeElevatorScene, {
 } from "./ThreeElevatorScene";
 import { LoadingScreen } from "./LoadingScreen";
 import { useElevatorAudio } from "../hooks/useElevatorAudio.ts";
+import { useBackgroundMusic } from "../hooks/useBackgroundMusic";
 
 interface ElevatorSceneProps {
   onReachClubFloor: (floor: number) => void;
@@ -35,10 +36,21 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
   );
   const [isElevatorAnimating, setIsElevatorAnimating] = useState(false);
   const threeRef = useRef<ThreeElevatorSceneHandle>(null);
-  const { playElevatorSound, stopElevatorSound, setVolume, getVolume, audioState, getAudioState, handlePhaseTransition } = useElevatorAudio();
+  const { playElevatorSound, stopElevatorSound, setVolume, getVolume, getAudioState, handlePhaseTransition } = useElevatorAudio();
+  
+  // Background music for elevator scene
+  const { 
+    playBackgroundMusic, 
+    stopBackgroundMusic, 
+    pauseBackgroundMusic, 
+    resumeBackgroundMusic,
+    setVolume: setBgVolume, 
+    getVolume: getBgVolume, 
+    audioState: bgAudioState 
+  } = useBackgroundMusic('/sounds/In elevator and _Welcome..._ page groove.mp3');
   
   // Real-time synchronization state
-  const [syncInfo, setSyncInfo] = useState({
+  const [, setSyncInfo] = useState({
     currentKeyframe: 0,
     currentPhase: 'idle' as 'closing' | 'closed' | 'opening' | 'idle',
     phaseProgress: 0,
@@ -111,12 +123,20 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
     onReachClubFloor(currentFloor);
   };
 
-  // Cleanup on unmount
+  // Start background music when component mounts
   useEffect(() => {
+    // Add a small delay to ensure audio is properly initialized
+    const timer = setTimeout(() => {
+      playBackgroundMusic();
+    }, 100);
+    
+    // Cleanup: stop music when component unmounts
     return () => {
+      clearTimeout(timer);
+      stopBackgroundMusic();
       stopElevatorSound();
     };
-  }, [stopElevatorSound]);
+  }, [playBackgroundMusic, stopBackgroundMusic, stopElevatorSound]);
 
   return (
     <div className="flex flex-col lg:flex-row w-full h-screen bg-black">
@@ -154,28 +174,50 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
           
 
 
-        {/* Nightclub Music Controller */}
+        {/* Enhanced Music Controller */}
         <div className="absolute top-4 right-4 z-30">
           <div className="bg-black/80 backdrop-blur-md rounded-xl p-2 border border-purple-500/50 shadow-2xl">
             <div className="text-purple-300 text-xs font-semibold mb-1 text-center tracking-wider">🎵</div>
             
-            {/* Play/Pause Button */}
+            {/* Background Music Play/Pause Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (audioState.isPlaying) {
-                  stopElevatorSound();
+                if (bgAudioState.isPlaying) {
+                  pauseBackgroundMusic();
                 } else {
-                  playElevatorSound(8.0);
+                  resumeBackgroundMusic();
                 }
               }}
               className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-all duration-200 mb-1 shadow-lg hover:shadow-purple-500/50 mx-auto"
             >
-              {audioState.isPlaying ? '⏸️' : '▶️'}
+              {bgAudioState.isPlaying ? '⏸️' : '▶️'}
             </button>
             
-            {/* Volume Control */}
-            <div className="text-purple-300 text-xs mb-1 text-center">Vol</div>
+            {/* Background Music Volume Control */}
+            <div className="text-purple-300 text-xs mb-1 text-center">BG Vol</div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={getBgVolume()}
+              onChange={(e) => {
+                e.stopPropagation();
+                setBgVolume(parseFloat(e.target.value));
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-12 h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer slider"
+              style={{
+                background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${getBgVolume() * 100}%, #374151 ${getBgVolume() * 100}%, #374151 100%)`
+              }}
+            />
+            <div className="text-purple-300 text-xs text-center">
+              {Math.round(getBgVolume() * 100)}%
+            </div>
+            
+            {/* Elevator Sound Effects Volume Control */}
+            <div className="text-purple-300 text-xs mb-1 text-center mt-2">SFX Vol</div>
             <input
               type="range"
               min="0"
@@ -189,7 +231,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
               onClick={(e) => e.stopPropagation()}
               className="w-12 h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer slider"
               style={{
-                background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${getVolume() * 100}%, #374151 ${getVolume() * 100}%, #374151 100%)`
+                background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${getVolume() * 100}%, #374151 ${getVolume() * 100}%, #374151 100%)`
               }}
             />
             <div className="text-purple-300 text-xs text-center">
@@ -198,8 +240,8 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
             
             {/* Music Status */}
             <div className="text-center mt-1">
-              {audioState.isLoaded ? (
-                <div className={`w-1.5 h-1.5 rounded-full mx-auto ${audioState.isPlaying ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50' : 'bg-purple-400'}`}></div>
+              {bgAudioState.isLoaded ? (
+                <div className={`w-1.5 h-1.5 rounded-full mx-auto ${bgAudioState.isPlaying ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50' : 'bg-purple-400'}`}></div>
               ) : (
                 <div className="w-1.5 h-1.5 rounded-full mx-auto bg-gray-400"></div>
               )}

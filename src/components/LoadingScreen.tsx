@@ -102,11 +102,11 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
           </div>
         )}
         
-        {audioStarted && (
+        {/* {audioStarted && (
           <div className="mt-6 text-green-400 font-semibold">
             🎵 DJ Barry Audio Playing!
           </div>
-        )}
+        )} */}
         
         <div className="mt-4 flex justify-center space-x-2">
           <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>

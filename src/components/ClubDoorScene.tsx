@@ -11,12 +11,12 @@ const FLOOR_IMAGES = [
   "/imgs/4th.png",
 ];
 
-const FLOOR_LABELS = [
-  "1st floor - Party Vibes",
-  "2nd floor - Boogie Wonderland",
-  "3rd floor - For The Sexy People",
-  "4th floor - Late Night Agenda",
-];
+// const FLOOR_LABELS = [
+//   "1st floor - Party Vibes",
+//   "2nd floor - Boogie Wonderland",
+//   "3rd floor - For The Sexy People",
+//   "4th floor - Late Night Agenda",
+// ];
 
 const FLOOR_THEMES = [
   "#06f6f6", // 1st floor - cyan
@@ -64,12 +64,12 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
   const welcomeMusicRef = useRef<HTMLAudioElement | null>(null);
   const paymentMusicRef = useRef<HTMLAudioElement | null>(null);
 
-  // Restored: DJ voiceover should work at club door (this was working fine)
+  // DJ voiceover plays automatically when arriving at club door
   const [hasPlayedVoiceover, setHasPlayedVoiceover] = useState(false);
   
   const playDJVoiceOverOnce = () => {
     if (!hasPlayedVoiceover) {
-      playDJVoiceOver(); // This plays voiceover.mp3 (which should work)
+      playDJVoiceOver(); // This plays voiceover.mp3
       setHasPlayedVoiceover(true);
     }
   };
@@ -85,7 +85,7 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
     };
   }, [clubFloor]);
 
-  // Initialize and manage background music
+  // Initialize and manage background music and voiceover
   useEffect(() => {
     // Start welcome music when component mounts
     if (welcomeMusicRef.current) {
@@ -93,7 +93,13 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
       welcomeMusicRef.current.play().catch(console.error);
     }
 
+    // Play DJ voiceover automatically when arriving at club door
+    const voiceoverTimer = setTimeout(() => {
+      playDJVoiceOverOnce();
+    }, 500); // Small delay to ensure audio is ready
+
     return () => {
+      clearTimeout(voiceoverTimer);
       // Cleanup audio on unmount
       if (welcomeMusicRef.current) {
         welcomeMusicRef.current.pause();
@@ -128,8 +134,6 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
         setSubscription(data);
         setCheckingSub(false);
         setShowWelcomeMessage(true);
-        // Play DJ voice-over when welcome message shows after auth check (only once)
-        playDJVoiceOverOnce();
       })
       .catch(() => {
         setSubscription(null);
@@ -158,8 +162,6 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
         setSubscription(data);
         setCheckingSub(false);
         setShowWelcomeMessage(true);
-        // Play DJ voice-over when welcome message shows after successful auth (only once)
-        playDJVoiceOverOnce();
       })
       .catch(() => {
         setSubscription(null);
@@ -356,7 +358,7 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
       {/* Background music elements */}
       <audio
         ref={welcomeMusicRef}
-        src="/sounds/welcome..._ page_groove.mp3"
+        src="/sounds/In elevator and _Welcome..._ page groove.mp3"
         loop
         style={{ display: 'none' }}
       />
@@ -593,8 +595,6 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
                   setSubscription(data);
                   setCheckingSub(false);
                   setShowWelcomeMessage(true);
-                  // Play DJ voice-over when welcome message shows after payment (only once)
-                  playDJVoiceOverOnce();
                   // Reset the justPaid flag after a delay
                   setTimeout(() => setJustPaid(false), 5000);
                 })

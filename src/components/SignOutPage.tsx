@@ -11,7 +11,7 @@ export const SignOutPage: React.FC<SignOutPageProps> = () => {
   const reason = location.state?.reason || "session_expired";
 
   useEffect(() => {
-    // Stop any playing music immediately
+    // Stop any playing music immediately and aggressively
     const stopAllMusic = () => {
       // Stop any audio elements
       const audioElements = document.querySelectorAll('audio');
@@ -19,13 +19,28 @@ export const SignOutPage: React.FC<SignOutPageProps> = () => {
         if (audio instanceof HTMLAudioElement) {
           audio.pause();
           audio.currentTime = 0;
+          audio.src = ''; // Clear the source to prevent browser media controls
+          audio.load(); // Reload to clear any cached media
         }
       });
       
-      // Also try to stop any AudioContext if it exists
+      // Stop any global audio references
+      if ((window as any).djBarryAudio) {
+        (window as any).djBarryAudio.pause();
+        (window as any).djBarryAudio.currentTime = 0;
+        (window as any).djBarryAudio.src = '';
+        (window as any).djBarryAudio = null;
+      }
+      
+      // Stop any AudioContext if it exists
       if (window.AudioContext || (window as any).webkitAudioContext) {
-        // This will stop any Web Audio API audio
         console.log('🎵 Stopping all music on signout page');
+      }
+      
+      // Clear any media session metadata to remove browser media controls
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
       }
     };
 
