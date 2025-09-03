@@ -45,14 +45,14 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       // Play first background track (bbc_new-york.mp3) - traffic sounds, lower volume
       if (audioRef1.current) {
         audioRef1.current.currentTime = 0;
-        audioRef1.current.volume = 0.1; // Lower volume for traffic sounds
+        audioRef1.current.volume = 0.2; // Lower volume for traffic sounds
         audioRef1.current.play().catch(() => {});
       }
       
       // Play second background track (Walking_groove_in_alley.mp3) - main groove, higher volume
       if (audioRef2.current) {
         audioRef2.current.currentTime = 0;
-        audioRef2.current.volume = 0.25; // Higher volume for the walking groove
+        audioRef2.current.volume = 0.4; // Increased volume for the walking groove
         audioRef2.current.play().catch(() => {});
       }
     }
@@ -86,35 +86,54 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         <div className="absolute inset-0 bg-gradient-to-r from-black via-purple-900/20 to-black animate-pulse" 
              style={{ animationDuration: '4s' }} />
         
-        {/* Animated neon signs */}
-        <div className={`absolute top-16 left-10 text-pink-400 text-5xl font-extrabold transition-all duration-300 drop-shadow-[0_0_20px_rgba(255,0,128,0.7)] ${
-          flickerState ? 'opacity-100 animate-pulse' : 'opacity-30'
-        }`}>
-          <div className="neon-sign transform hover:scale-110 transition-transform duration-300 tracking-widest">
+        {/* Wonderful animated neon signs with dynamic effects */}
+        <div className={`absolute top-16 left-8 text-pink-400 text-5xl font-bold transition-all duration-500 hover:scale-110 hover:text-pink-300 animate-neon-breathe ${
+          flickerState ? 'opacity-100 animate-neon-flicker' : 'opacity-70 animate-neon-sparkle'
+        }`} style={{ 
+          textShadow: '0 0 8px #ff0080, 0 0 16px #ff0080, 0 0 24px #ff0080',
+          letterSpacing: '0.05em'
+        }}>
+          <div className="relative">
             DISCO
+            <div className="absolute inset-0 text-pink-200 animate-ping opacity-30" style={{ animationDuration: '3s' }}>DISCO</div>
           </div>
-          <div className="absolute inset-0 neon-sign blur-lg opacity-60">DISCO</div>
         </div>
         
-        <div className="absolute top-32 right-16 text-cyan-400 text-3xl font-bold animate-pulse drop-shadow-[0_0_16px_rgba(0,255,255,0.6)]" 
-             style={{ animationDelay: '0.5s', letterSpacing: '0.2em' }}>
-          <div className="neon-sign transform hover:scale-105 transition-transform duration-300">
+        <div className="absolute top-28 right-16 text-cyan-400 text-3xl font-bold transition-all duration-300 hover:scale-105 hover:text-cyan-300 animate-neon-wave" 
+             style={{ 
+               animationDelay: '0.5s', 
+               letterSpacing: '0.1em',
+               textShadow: '0 0 6px #00ffff, 0 0 12px #00ffff, 0 0 18px #00ffff'
+             }}>
+          <div className="relative">
             24/7
+            <div className="absolute inset-0 text-cyan-200 animate-ping opacity-25" style={{ animationDuration: '2.5s' }}>24/7</div>
           </div>
-          <div className="absolute inset-0 neon-sign blur-lg opacity-40">24/7</div>
         </div>
         
-        {/* Additional animated neon elements */}
-        <div className="absolute top-60 left-20 text-red-400 text-2xl font-bold animate-pulse drop-shadow-[0_0_12px_rgba(255,64,64,0.5)]"
-             style={{ animationDelay: '2s', animationDuration: '3s', letterSpacing: '0.15em' }}>
-          <div className="neon-sign opacity-80">LIVE</div>
-          <div className="absolute inset-0 neon-sign blur-md opacity-50">LIVE</div>
+        {/* Dynamic neon elements with enhanced animations */}
+        <div className="absolute top-48 left-16 text-red-400 text-2xl font-bold transition-all duration-400 hover:scale-110 hover:text-red-300 animate-neon-flicker"
+             style={{ 
+               animationDelay: '2s', 
+               letterSpacing: '0.05em',
+               textShadow: '0 0 5px #ff4040, 0 0 10px #ff4040, 0 0 15px #ff4040'
+             }}>
+          <div className="relative">
+            LIVE
+            <div className="absolute inset-0 text-red-200 animate-ping opacity-20" style={{ animationDuration: '4s' }}>LIVE</div>
+          </div>
         </div>
         
-        <div className="absolute bottom-80 right-8 text-yellow-400 text-xl font-bold animate-pulse drop-shadow-[0_0_10px_rgba(255,255,0,0.4)]"
-             style={{ animationDelay: '1.5s', animationDuration: '2.5s', letterSpacing: '0.12em' }}>
-          <div className="neon-sign opacity-70">OPEN</div>
-          <div className="absolute inset-0 neon-sign blur-md opacity-40">OPEN</div>
+        <div className="absolute bottom-80 right-8 text-yellow-400 text-xl font-bold transition-all duration-300 hover:scale-105 hover:text-yellow-300 animate-neon-breathe"
+             style={{ 
+               animationDelay: '1.5s', 
+               letterSpacing: '0.03em',
+               textShadow: '0 0 4px #ffff00, 0 0 8px #ffff00, 0 0 12px #ffff00'
+             }}>
+          <div className="relative">
+            OPEN
+            <div className="absolute inset-0 text-yellow-200 animate-ping opacity-30" style={{ animationDuration: '3.5s' }}>OPEN</div>
+          </div>
         </div>
         
         {/* Enhanced steam particles with floating animation */}
@@ -125,14 +144,26 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         <div className="absolute bottom-24 left-1/3 w-1 h-4 bg-gradient-to-t from-white/10 to-transparent animate-bounce"
              style={{ opacity: steamOpacity * 0.5, animationDelay: '2s', animationDuration: '3.5s' }} />
         
-        {/* Animated graffiti elements with glow effects */}
-        <div className="absolute left-8 bottom-40 text-red-400 font-extrabold text-3xl opacity-80 transform -rotate-12 hover:opacity-100 transition-opacity duration-300 drop-shadow-[0_0_18px_rgba(255,0,0,0.5)]">
-          <div className="animate-pulse tracking-widest" style={{ animationDuration: '3s' }}>GROOVE</div>
-          <div className="absolute inset-0 blur-lg opacity-50 animate-pulse" style={{ animationDuration: '3s' }}>GROOVE</div>
+        {/* Wonderful animated graffiti elements */}
+        <div className="absolute left-8 bottom-40 text-red-400 font-bold text-3xl opacity-90 transform -rotate-12 hover:opacity-100 hover:scale-110 transition-all duration-500 animate-neon-sparkle"
+             style={{ 
+               textShadow: '0 0 6px #ff0000, 0 0 12px #ff0000, 0 0 18px #ff0000',
+               letterSpacing: '0.03em'
+             }}>
+          <div className="relative tracking-widest">
+            GROOVE
+            <div className="absolute inset-0 text-red-200 animate-ping opacity-25" style={{ animationDuration: '4s' }}>GROOVE</div>
+          </div>
         </div>
-        <div className="absolute right-12 bottom-60 text-blue-400 font-extrabold text-2xl opacity-70 transform rotate-6 hover:opacity-100 transition-opacity duration-300 drop-shadow-[0_0_14px_rgba(0,128,255,0.5)]">
-          <div className="animate-pulse tracking-widest" style={{ animationDuration: '2.5s', animationDelay: '1s' }}>FUNK</div>
-          <div className="absolute inset-0 blur-lg opacity-40 animate-pulse" style={{ animationDuration: '2.5s', animationDelay: '1s' }}>FUNK</div>
+        <div className="absolute right-12 bottom-60 text-blue-400 font-bold text-2xl opacity-85 transform rotate-6 hover:opacity-100 hover:scale-110 transition-all duration-500 animate-neon-wave"
+             style={{ 
+               textShadow: '0 0 5px #0080ff, 0 0 10px #0080ff, 0 0 15px #0080ff',
+               letterSpacing: '0.02em'
+             }}>
+          <div className="relative tracking-widest">
+            FUNK
+            <div className="absolute inset-0 text-blue-200 animate-ping opacity-20" style={{ animationDuration: '3.5s' }}>FUNK</div>
+          </div>
         </div>
         
         {/* Flickering street light effect */}
