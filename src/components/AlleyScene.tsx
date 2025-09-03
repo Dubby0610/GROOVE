@@ -45,7 +45,7 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
       // Play first background track (bbc_new-york.mp3) - traffic sounds, lower volume
       if (audioRef1.current) {
         audioRef1.current.currentTime = 0;
-        audioRef1.current.volume = 0.2; // Lower volume for traffic sounds
+        audioRef1.current.volume = 0.1; // Lower volume for traffic sounds
         audioRef1.current.play().catch(() => {});
       }
       
