@@ -59,7 +59,7 @@ export const useElevatorAudio = (): UseElevatorAudioReturn => {
   const [audioState, setAudioState] = useState({
     isLoaded: false,
     isPlaying: false,
-    volume: 0.6,
+    volume: 0.25, // Reduced to match Alley scene balance
     duration: 28 // Total duration: 4 + 20 + 4 = 28 seconds
   });
 
@@ -67,19 +67,19 @@ export const useElevatorAudio = (): UseElevatorAudioReturn => {
   if (!closeDoorAudioRef.current) {
     closeDoorAudioRef.current = new Audio('/sounds/elevator_close_door.mp3');
     closeDoorAudioRef.current.preload = 'auto';
-    closeDoorAudioRef.current.volume = 0.6;
+    closeDoorAudioRef.current.volume = 0.25; // Reduced to match Alley scene balance
   }
   
   if (!movingAudioRef.current) {
     movingAudioRef.current = new Audio('/sounds/elevator_moving.mp3');
     movingAudioRef.current.preload = 'auto';
-    movingAudioRef.current.volume = 0.6;
+    movingAudioRef.current.volume = 0.25; // Reduced to match Alley scene balance
   }
   
   if (!openDoorAudioRef.current) {
     openDoorAudioRef.current = new Audio('/sounds/elevator_open_door.mp3');
     openDoorAudioRef.current.preload = 'auto';
-    openDoorAudioRef.current.volume = 0.6;
+    openDoorAudioRef.current.volume = 0.25; // Reduced to match Alley scene balance
   }
 
   // Set up audio event listeners for all files
