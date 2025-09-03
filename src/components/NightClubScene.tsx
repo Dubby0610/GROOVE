@@ -231,7 +231,7 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
   // Handle manual logout
   const handleLogout = () => {
     // Just show the confirmation dialog - don't clear any data yet
-    setShowLogoutConfirm(true);
+      setShowLogoutConfirm(true);
   };
 
   const handleConfirmedLogout = async () => {

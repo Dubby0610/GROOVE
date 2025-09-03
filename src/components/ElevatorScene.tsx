@@ -174,8 +174,8 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
           
 
 
-        {/* Enhanced Music Controller */}
-        <div className="absolute top-4 right-4 z-30">
+        {/* Enhanced Music Controller - Hidden but functional */}
+        <div className="absolute top-4 right-4 z-30 hidden">
           <div className="bg-black/80 backdrop-blur-md rounded-xl p-2 border border-purple-500/50 shadow-2xl">
             <div className="text-purple-300 text-xs font-semibold mb-1 text-center tracking-wider">🎵</div>
             
