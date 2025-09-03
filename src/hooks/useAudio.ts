@@ -31,7 +31,7 @@ export const useAudio = () => {
     if (djVoiceOverRef.current) {
       djVoiceOverRef.current.src = '/sounds/voiceover.mp3';
       djVoiceOverRef.current.preload = 'auto';
-      djVoiceOverRef.current.volume = 0.8;
+      djVoiceOverRef.current.volume = 0.3; // Reduced from 0.8 to 0.3 for better balance
     }
 
     // For demo purposes, we'll use data URLs for simple tones

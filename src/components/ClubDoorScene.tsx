@@ -87,16 +87,16 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
 
   // Initialize and manage background music and voiceover
   useEffect(() => {
-    // Start welcome music when component mounts
+    // Start welcome music when component mounts with higher volume
     if (welcomeMusicRef.current) {
-      welcomeMusicRef.current.volume = 0.3;
+      welcomeMusicRef.current.volume = 0.5; // Increased from 0.3 to 0.5
       welcomeMusicRef.current.play().catch(console.error);
     }
 
-    // Play DJ voiceover automatically when arriving at club door
+    // Play DJ voiceover after 1.5 seconds with lower volume
     const voiceoverTimer = setTimeout(() => {
       playDJVoiceOverOnce();
-    }, 500); // Small delay to ensure audio is ready
+    }, 1500); // Changed from 500ms to 1500ms (1.5 seconds)
 
     return () => {
       clearTimeout(voiceoverTimer);
@@ -420,88 +420,45 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
         ))}
       </div>
 
-      {/* DJ Voice-over modal only if authenticated and not showing auth modal */}
+      {/* Simplified DJ modal - only microphone and click message */}
       {((isAuthenticated && showWelcomeMessage && !authModalOpen) || (!showPaymentModal && !authModalOpen)) && (
         <div
-          className="absolute bottom-20 left-1/2 transform -translate-x-1/2 max-w-sm mx-4 z-20"
+          className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-20"
           onMouseEnter={() => setDjHovered(true)}
           onMouseLeave={() => setDjHovered(false)}
           onClick={checkingSub ? undefined : handleDJClick}
           style={{ cursor: checkingSub ? "not-allowed" : "pointer" }}
         >
-          <div
-            className={`rounded-3xl p-8 border-4 transition-all duration-300 animate-fade-in
-              ${
-                djHovered
-                  ? "bg-gradient-to-br from-cyan-100/95 via-purple-50/95 to-pink-100/95 border-cyan-400 shadow-2xl ring-8 ring-cyan-300/30 transform scale-105"
-                  : "bg-gradient-to-br from-black/90 via-purple-900/80 to-black/90 backdrop-blur-lg border-purple-500/60 shadow-xl"
+          <div className="text-center flex flex-col items-center">
+            {/* Large animated microphone icon */}
+            <div
+              className={`text-8xl mb-6 transition-all duration-700 ${
+                djHovered ? "text-cyan-600" : "text-purple-300"
               }`}
-            style={{
-              transition: "all 0.3s cubic-bezier(.4,2,.6,1)",
-              boxShadow: djHovered
-                ? "0 0 40px 12px rgba(34,211,238,0.4), 0 0 80px 20px rgba(168,85,247,0.2), 0 4px 20px rgba(0,0,0,0.3)"
-                : "0 0 20px 5px rgba(168,85,247,0.3), 0 4px 15px rgba(0,0,0,0.4)",
-            }}
-          >
-            <div className="text-center flex flex-col items-center">
-              {/* Large animated microphone icon */}
-              <div
-                className={`text-6xl mb-4 transition-all duration-300 ${
-                  djHovered ? "text-cyan-600 animate-pulse" : "text-purple-300 animate-bounce"
-                }`}
-                style={{
-                  filter: djHovered ? "drop-shadow(0 0 20px rgba(34,211,238,0.6))" : "drop-shadow(0 0 15px rgba(168,85,247,0.5))",
-                  transform: djHovered ? "scale(1.1)" : "scale(1)",
-                }}
-              >
-                🎤
-              </div>
-              
-              {/* DJ Voice-Over title with gradient */}
-              <div
-                className={`text-2xl font-bold mb-3 transition-all duration-300 ${
-                  djHovered 
-                    ? "bg-gradient-to-r from-cyan-600 to-purple-600 bg-clip-text text-transparent" 
-                    : "bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"
-                }`}
-                style={{
-                  filter: djHovered ? "drop-shadow(0 2px 8px rgba(34,211,238,0.3))" : "drop-shadow(0 2px 8px rgba(168,85,247,0.4))",
-                }}
-              >
-                DJ Voice-Over
-              </div>
-
-              {/* Status message with animated background */}
-              <div className={`relative px-6 py-3 rounded-full transition-all duration-300 ${
-                djHovered 
-                  ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20" 
-                  : "bg-gradient-to-r from-purple-500/30 to-pink-500/30"
-              }`}>
-                <div
-                  className={`text-sm font-semibold transition-colors duration-300 ${
-                    djHovered ? "text-cyan-700" : "text-cyan-300"
-                  }`}
-                >
-                  {checkingSub ? (
-                    <span className="flex items-center space-x-2">
-                      <span className="animate-spin">⏳</span>
-                      <span>Checking access...</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center space-x-2 animate-pulse">
-                      <span>🚪</span>
-                      <span>Click here to enter!</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Animated border effect */}
-              <div className={`absolute inset-0 rounded-3xl border-2 transition-all duration-300 ${
-                djHovered 
-                  ? "border-cyan-300/50 animate-pulse" 
-                  : "border-purple-400/30"
-              }`} style={{ pointerEvents: 'none' }} />
+              style={{
+                filter: djHovered ? "drop-shadow(0 0 20px rgba(34,211,238,0.6))" : "drop-shadow(0 0 15px rgba(168,85,247,0.5))",
+                transform: djHovered ? "scale(1.1) translateY(-8px)" : "scale(1) translateY(0)",
+                animation: djHovered ? "microphoneFloat 3s ease-in-out infinite" : "none",
+                transition: "all 0.7s cubic-bezier(0.4, 0, 0.2, 1)"
+              }}
+            >
+              🎤
+            </div>
+            
+            {/* Click message only */}
+            <div className={`text-lg font-semibold transition-colors duration-300 ${
+              djHovered ? "text-cyan-300" : "text-purple-300"
+            }`}>
+              {checkingSub ? (
+                <span className="flex items-center space-x-2">
+                  <span className="animate-spin">⏳</span>
+                  <span>Checking access...</span>
+                </span>
+              ) : (
+                <span className="flex items-center space-x-2 animate-pulse">
+                  <span>Click here to enter!</span>
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -532,20 +489,46 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
         <div className="text-white text-2xl font-bold">247</div>
       </div>
 
-      {/* Sign Out Button */}
+      {/* Enhanced Sign Out Button */}
       {isAuthenticated && (
         <div className="absolute top-6 right-6">
           <button
             onClick={handleSignOut}
             disabled={isSigningOut}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-2xl hover:shadow-3xl flex items-center space-x-3 border-2 ${
+            className={`relative px-6 py-3 rounded-xl font-bold transition-all duration-500 shadow-2xl hover:shadow-3xl flex items-center space-x-3 border-2 overflow-hidden group ${
               isSigningOut 
-                ? "bg-gray-500 border-gray-400 cursor-not-allowed opacity-75" 
-                : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-purple-400 hover:border-purple-300 cursor-pointer transform hover:scale-105 active:scale-95"
+                ? "bg-gradient-to-r from-gray-600 to-gray-500 border-gray-400 cursor-not-allowed opacity-80" 
+                : "bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 border-red-400 hover:border-red-300 cursor-pointer transform hover:scale-110 active:scale-95"
             }`}
+            style={{
+              backdropFilter: 'blur(10px)',
+              boxShadow: isSigningOut 
+                ? '0 10px 25px rgba(0,0,0,0.3)' 
+                : '0 10px 30px rgba(239,68,68,0.4), 0 0 20px rgba(239,68,68,0.2)'
+            }}
           >
-            <span className="text-lg">{isSigningOut ? "⏳" : "🚪"}</span>
-            <span className="text-white font-medium">{isSigningOut ? "Signing Out..." : "Sign Out"}</span>
+            {/* Animated background effect */}
+            <div className={`absolute inset-0 bg-gradient-to-r from-white/10 to-transparent transform -skew-x-12 transition-transform duration-700 ${
+              isSigningOut ? 'opacity-0' : 'group-hover:translate-x-full'
+            }`} />
+            
+            {/* Text with enhanced styling */}
+            <span className={`relative z-10 font-bold transition-all duration-300 ${
+              isSigningOut ? 'text-gray-200' : 'text-white'
+            }`} style={{
+              textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+              fontSize: '1.1rem'
+            }}>
+              {isSigningOut ? "Signing Out..." : "Sign Out"}
+            </span>
+            
+            {/* Hover glow effect */}
+            <div className={`absolute inset-0 rounded-2xl transition-all duration-300 ${
+              isSigningOut ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'
+            }`} style={{
+              background: 'radial-gradient(circle at center, rgba(239,68,68,0.3) 0%, transparent 70%)',
+              filter: 'blur(8px)'
+            }} />
           </button>
         </div>
       )}

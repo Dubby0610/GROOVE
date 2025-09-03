@@ -215,6 +215,22 @@
     }
   }
   
+  /* Microphone floating animation */
+  @keyframes microphoneFloat {
+    0%, 100% {
+      transform: translateY(-8px) scale(1.1);
+    }
+    25% {
+      transform: translateY(-12px) scale(1.1) rotate(2deg);
+    }
+    50% {
+      transform: translateY(-6px) scale(1.1) rotate(-1deg);
+    }
+    75% {
+      transform: translateY(-14px) scale(1.1) rotate(1deg);
+    }
+  }
+  
   .animate-sound-bar-up {
     animation: soundBarUp 0.8s ease-in-out infinite;
   }
