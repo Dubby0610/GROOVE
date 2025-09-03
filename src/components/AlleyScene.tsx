@@ -42,17 +42,17 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   // Play music only after loading is complete
   useEffect(() => {
     if (!isLoading) {
-      // Play first background track (bbc_new-york.mp3)
+      // Play first background track (bbc_new-york.mp3) - traffic sounds, lower volume
       if (audioRef1.current) {
         audioRef1.current.currentTime = 0;
-        audioRef1.current.volume = 0.15; // Slightly lower volume for ambient background
+        audioRef1.current.volume = 0.1; // Lower volume for traffic sounds
         audioRef1.current.play().catch(() => {});
       }
       
-      // Play second background track (Walking_groove_in_alley.mp3)
+      // Play second background track (Walking_groove_in_alley.mp3) - main groove, higher volume
       if (audioRef2.current) {
         audioRef2.current.currentTime = 0;
-        audioRef2.current.volume = 0.15; // Higher volume for the walking groove
+        audioRef2.current.volume = 0.25; // Higher volume for the walking groove
         audioRef2.current.play().catch(() => {});
       }
     }
@@ -65,14 +65,12 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         ref={audioRef1}
         src="/sounds/bbc_new-york.mp3"
         loop
-        autoPlay
         style={{ display: 'none' }}
       />
       <audio
         ref={audioRef2}
         src="/sounds/Walking_groove_in_alley.mp3"
         loop
-        autoPlay
         style={{ display: 'none' }}
       />
       {isLoading && <LoadingScreen message="Loading alley..." />}
