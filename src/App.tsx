@@ -32,6 +32,39 @@ function AppRoutes() {
   // Add a state to track if club floor is being determined
   const [isDeterminingFloor, setIsDeterminingFloor] = useState(false);
 
+  // Global audio management - preserve background music during transitions
+  const preserveBackgroundMusic = () => {
+    console.log('🎵 Preserving background music during transition...');
+    
+    // Find all audio elements that are background music (not voiceover)
+    const audioElements = document.querySelectorAll('audio');
+    audioElements.forEach(audio => {
+      if (audio.src && 
+          !audio.src.includes('voiceover.mp3') && 
+          !audio.src.includes('Dj_Barry_dancefloor line.mp3') &&
+          !audio.paused) {
+        console.log('🎵 Preserving background music:', audio.src);
+        // Mark this audio as preserved so it continues during loading
+        (audio as any).preservedDuringTransition = true;
+      }
+    });
+  };
+
+  const stopPreservedBackgroundMusic = () => {
+    console.log('🛑 Stopping preserved background music...');
+    
+    // Stop all preserved background music
+    const audioElements = document.querySelectorAll('audio');
+    audioElements.forEach(audio => {
+      if ((audio as any).preservedDuringTransition) {
+        console.log('🛑 Stopping preserved background music:', audio.src);
+        audio.pause();
+        audio.currentTime = 0;
+        (audio as any).preservedDuringTransition = false;
+      }
+    });
+  };
+
   const navigate = useNavigate();
 
   // Restore selected floor from localStorage on mount
@@ -42,6 +75,7 @@ function AppRoutes() {
 
   // Alley → Elevator
   const handleEnterBuilding = () => {
+    preserveBackgroundMusic(); // Preserve background music during transition
     setIsLoading(true);
     setLoadingMessage('Calling the elevator...');
     setLoadingAudioFile(undefined); // Clear any previous audio file
@@ -49,11 +83,12 @@ function AppRoutes() {
       setIsLoading(false);
       setLoadingMessage(undefined);
       navigate('/elevator');
-    }, 1500);
+    }, 1800);
   };
 
   // When user selects a floor in the elevator:
   const handleReachClubFloor = (floor: number) => {
+    preserveBackgroundMusic(); // Preserve background music during transition
     setSelectedClubFloor(floor);
     localStorage.setItem("selectedClubFloor", String(floor));
     setIsLoading(true);
@@ -68,15 +103,15 @@ function AppRoutes() {
 
   // Club Door → Club Success
   const handleEnterClub = () => {
+    preserveBackgroundMusic(); // Preserve background music during transition
     setIsLoading(true);
     setLoadingMessage('Entering the club...');
     setLoadingAudioFile(undefined); // NO audio during this phase
     setIsDeterminingFloor(true);
-    playDiscoTrack(false); // Clear
+    setLoadingAudioFile(undefined);
     setTimeout(() => {
       setIsLoading(false);
       setLoadingMessage(undefined);
-      setLoadingAudioFile(undefined);
       navigate('/club-success');
       // Allow full 7-second audio playback before transitioning to club scene
       setTimeout(() => setIsDeterminingFloor(false), 8000); // Show loading for 8s to allow full audio

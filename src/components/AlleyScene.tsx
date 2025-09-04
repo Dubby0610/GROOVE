@@ -42,6 +42,23 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
   // Play music only after loading is complete
   useEffect(() => {
     if (!isLoading) {
+      // Stop any preserved background music from previous scenes
+      const stopPreservedBackgroundMusic = () => {
+        console.log('🛑 Stopping preserved background music for alley...');
+        const audioElements = document.querySelectorAll('audio');
+        audioElements.forEach(audio => {
+          if ((audio as any).preservedDuringTransition) {
+            console.log('🛑 Stopping preserved background music:', audio.src);
+            audio.pause();
+            audio.currentTime = 0;
+            (audio as any).preservedDuringTransition = false;
+          }
+        });
+      };
+      
+      // Stop preserved background music before starting alley music
+      stopPreservedBackgroundMusic();
+      
       // Play first background track (bbc_new-york.mp3) - traffic sounds, lower volume
       if (audioRef1.current) {
         audioRef1.current.currentTime = 0;

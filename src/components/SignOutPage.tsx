@@ -112,7 +112,7 @@ export const SignOutPage: React.FC<SignOutPageProps> = () => {
           
           <div className="mb-8 w-full">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/club-door')}
               className="w-full bg-gradient-to-r from-[#2af598] to-[#009efd] hover:from-[#009efd] hover:to-[#2af598] text-black font-extrabold py-3 px-4 rounded-2xl shadow-xl text-xl tracking-wider transition-all duration-200 drop-shadow-neon animate-glow"
             >
               Return to Entrance

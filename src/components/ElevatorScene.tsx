@@ -125,6 +125,23 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
 
   // Start background music when component mounts
   useEffect(() => {
+    // Stop any preserved background music from previous scenes
+    const stopPreservedBackgroundMusic = () => {
+      console.log('🛑 Stopping preserved background music for elevator...');
+      const audioElements = document.querySelectorAll('audio');
+      audioElements.forEach(audio => {
+        if ((audio as any).preservedDuringTransition) {
+          console.log('🛑 Stopping preserved background music:', audio.src);
+          audio.pause();
+          audio.currentTime = 0;
+          (audio as any).preservedDuringTransition = false;
+        }
+      });
+    };
+    
+    // Stop preserved background music before starting elevator music
+    stopPreservedBackgroundMusic();
+    
     // Add a small delay to ensure audio is properly initialized
     const timer = setTimeout(() => {
       playBackgroundMusic();

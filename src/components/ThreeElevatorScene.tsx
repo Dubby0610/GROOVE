@@ -209,9 +209,6 @@ const ThreeElevatorScene = forwardRef<ThreeElevatorSceneHandle, ThreeElevatorSce
           humanActionsRef.current[clip.name] = action;
         });
 
-        // Log available animation names for debugging
-        console.log('Available human animations:', Object.keys(humanActionsRef.current));
-
         // Play the "Standing" animation if it exists, otherwise play the first one
         const standingAction = humanActionsRef.current["Standing"] || Object.values(humanActionsRef.current)[0];
         if (standingAction) {

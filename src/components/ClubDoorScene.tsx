@@ -87,6 +87,23 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
 
   // Initialize and manage background music and voiceover
   useEffect(() => {
+    // Stop any preserved background music from previous scenes
+    const stopPreservedBackgroundMusic = () => {
+      console.log('🛑 Stopping preserved background music for club door...');
+      const audioElements = document.querySelectorAll('audio');
+      audioElements.forEach(audio => {
+        if ((audio as any).preservedDuringTransition) {
+          console.log('🛑 Stopping preserved background music:', audio.src);
+          audio.pause();
+          audio.currentTime = 0;
+          (audio as any).preservedDuringTransition = false;
+        }
+      });
+    };
+    
+    // Stop preserved background music before starting club door music
+    stopPreservedBackgroundMusic();
+    
     // Start welcome music when component mounts with higher volume
     if (welcomeMusicRef.current) {
       welcomeMusicRef.current.volume = 0.5; // Increased from 0.3 to 0.5

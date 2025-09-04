@@ -171,7 +171,6 @@ const ThreeNightClubScene: React.FC<ThreeNightClubSceneProps> = ({ floor, onLoad
           });
         }
       });
-      console.log(clubGltf.scene)
       scene.add(clubGltf.scene);
 
       // Optionally setup club animation mixer

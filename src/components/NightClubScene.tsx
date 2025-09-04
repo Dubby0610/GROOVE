@@ -74,6 +74,23 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
     setIsLoading(false);
     setTimerStarted(true);
     
+    // Stop any preserved background music from previous scenes
+    const stopPreservedBackgroundMusic = () => {
+      console.log('🛑 Stopping preserved background music for nightclub...');
+      const audioElements = document.querySelectorAll('audio');
+      audioElements.forEach(audio => {
+        if ((audio as any).preservedDuringTransition) {
+          console.log('🛑 Stopping preserved background music:', audio.src);
+          audio.pause();
+          audio.currentTime = 0;
+          (audio as any).preservedDuringTransition = false;
+        }
+      });
+    };
+    
+    // Stop preserved background music before starting nightclub music
+    stopPreservedBackgroundMusic();
+    
     // Start DJ Barry audio 2 seconds after models are loaded
     setTimeout(() => {
       console.log('🎵 Starting DJ Barry audio 2 seconds after models loaded');
