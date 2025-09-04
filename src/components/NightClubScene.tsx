@@ -45,7 +45,7 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.7);
+  const [volume, setVolume] = useState(0.4);
   const timerRef = useRef<number | null>(null);
   const navigate = useNavigate();
   const [authWarning, setAuthWarning] = useState(false);
@@ -73,6 +73,31 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
     console.log('🏗️ 3D models loaded - setting up nightclub');
     setIsLoading(false);
     setTimerStarted(true);
+    
+    // Start DJ Barry audio 2 seconds after models are loaded
+    setTimeout(() => {
+      console.log('🎵 Starting DJ Barry audio 2 seconds after models loaded');
+      const djBarryAudio = new Audio('/sounds/Dj_Barry_dancefloor line.mp3');
+      djBarryAudio.volume = 0.4;
+      djBarryAudio.loop = false;
+      
+      // Store globally so it doesn't stop when component unmounts
+      (window as any).djBarryAudio = djBarryAudio;
+      
+      // Add event listener to mark as finished when it ends
+      djBarryAudio.addEventListener('ended', () => {
+        console.log('✅ DJ Barry audio finished playing completely');
+        (window as any).djBarryAudio = null;
+      });
+      
+      djBarryAudio.play()
+        .then(() => {
+          console.log('✅ DJ Barry audio started 2 seconds after models loaded!');
+        })
+        .catch((error) => {
+          console.log('⚠️ DJ Barry autoplay blocked:', error.message);
+        });
+    }, 2000);
     
     // Start music automatically like the working scenes
     if (audioRef.current) {

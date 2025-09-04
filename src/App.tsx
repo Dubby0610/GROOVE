@@ -107,7 +107,7 @@ function AppRoutes() {
               isDeterminingFloor ? (
                 <LoadingScreen 
                   message="Loading your club experience..." 
-                  audioFile="/sounds/Dj_Barry_dancefloor line.mp3"
+                  audioFile={undefined}
                 />
               ) : (
                 <NightClubScene floor={selectedClubFloor || Number(localStorage.getItem("selectedClubFloor"))} />
