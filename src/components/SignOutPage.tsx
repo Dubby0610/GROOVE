@@ -101,7 +101,6 @@ export const SignOutPage: React.FC<SignOutPageProps> = () => {
         
         <div className="relative z-10 flex flex-col items-center text-center">
           <div className="mb-6 flex flex-col items-center">
-            <div className="text-5xl mb-4 animate-bounce text-[#2af598] drop-shadow-neon">🚪</div>
             <h2 className="text-3xl font-extrabold bg-gradient-to-r from-[#2af598] to-[#009efd] bg-clip-text text-transparent mb-4 text-center drop-shadow-neon">
               {getMessage()}
             </h2>

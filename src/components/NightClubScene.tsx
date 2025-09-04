@@ -95,7 +95,7 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
     setTimeout(() => {
       console.log('🎵 Starting DJ Barry audio 2 seconds after models loaded');
       const djBarryAudio = new Audio('/sounds/Dj_Barry_dancefloor line.mp3');
-      djBarryAudio.volume = 0.4;
+      djBarryAudio.volume = 0.7;
       djBarryAudio.loop = false;
       
       // Store globally so it doesn't stop when component unmounts
@@ -396,7 +396,7 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
 
       {/* Beautiful Music Visualizer - Center Bottom */}
       {!isLoading && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30">
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 hidden">
           <div className="relative bg-black/25 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-2xl min-w-[360px] overflow-hidden">
             {/* Glowing border effect */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 opacity-50 blur-sm" />
