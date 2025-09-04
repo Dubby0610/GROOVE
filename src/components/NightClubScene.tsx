@@ -28,6 +28,17 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
   
+  // Format expire date helper function
+  const formatExpireDate = (endDate: string): string => {
+    const date = new Date(endDate);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+  
   const [isLoading, setIsLoading] = useState(true);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [timerStarted, setTimerStarted] = useState(false);
@@ -39,14 +50,16 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
   const navigate = useNavigate();
   const [authWarning, setAuthWarning] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [subscriptionData, setSubscriptionData] = useState<any>(null);
 
-  // Fetch subscription on mount to get remaining time for hourly plan
+  // Fetch subscription on mount to get remaining time for hourly plan and end date for one-day plan
   useEffect(() => {
     const load = async () => {
       try {
         const res = await apiFetch(`/user/subscription`);
         if (!res.ok) return;
         const sub = await res.json();
+        setSubscriptionData(sub);
         if (sub.plan === "onehour" && typeof sub.remaining_time_seconds === "number") {
           setRemaining(sub.remaining_time_seconds);
         }
@@ -290,9 +303,43 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
       {isLoading && (
         <LoadingScreen message="Loading your club experience..." />
       )}
-      {remaining !== null && timerStarted && (
-        <div className="absolute top-6 right-6 bg-black/50 text-white px-4 py-2 rounded-lg text-sm">
-          Time left: {Math.max(0, Math.floor(remaining / 60))}m
+      {/* Enhanced Logout Button - Moved to top-right */}
+      <div className="absolute top-6 right-6">
+        <button
+          onClick={handleLogout}
+          className="relative px-4 py-2 rounded-xl font-bold transition-all duration-500 shadow-2xl hover:shadow-3xl flex items-center justify-center border-2 overflow-hidden group bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 border-red-400 hover:border-red-300 cursor-pointer transform hover:scale-110 active:scale-95"
+          style={{
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 10px 30px rgba(239,68,68,0.4), 0 0 20px rgba(239,68,68,0.2)'
+          }}
+        >
+          {/* Animated background effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent transform -skew-x-12 transition-transform duration-700 group-hover:translate-x-full" />
+          
+          {/* Text with enhanced styling */}
+          <span className="relative z-10 font-bold transition-all duration-300 text-white" style={{
+            textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+            fontSize: '1rem'
+          }}>
+            Signout
+          </span>
+          
+          {/* Hover glow effect */}
+          <div className="absolute inset-0 rounded-xl transition-all duration-300 opacity-0 group-hover:opacity-100" style={{
+            background: 'radial-gradient(circle at center, rgba(239,68,68,0.3) 0%, transparent 70%)',
+            filter: 'blur(8px)'
+          }} />
+        </button>
+      </div>
+
+      {/* Timer/Expire Date - Moved to top-left */}
+      {timerStarted && (
+        <div className="absolute top-6 left-6 bg-black/50 text-white px-4 py-2 rounded-lg text-sm">
+          {subscriptionData?.plan === "onehour" && remaining !== null ? (
+            <>Time left: {Math.max(0, Math.floor(remaining / 60))}m</>
+          ) : subscriptionData?.plan === "oneday" && subscriptionData?.end_date ? (
+            <>Expires: {formatExpireDate(subscriptionData.end_date)}</>
+          ) : null}
         </div>
       )}
       
@@ -419,12 +466,6 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
         </div>
       )}
       
-      <button
-        onClick={handleLogout}
-        className="absolute top-6 left-6 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm"
-      >
-        Logout
-      </button>
 
       {/* Logout Confirmation Dialog */}
       {showLogoutConfirm && (

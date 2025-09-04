@@ -495,7 +495,7 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
           <button
             onClick={handleSignOut}
             disabled={isSigningOut}
-            className={`relative px-6 py-3 rounded-xl font-bold transition-all duration-500 shadow-2xl hover:shadow-3xl flex items-center space-x-3 border-2 overflow-hidden group ${
+            className={`relative px-4 py-2 rounded-xl font-bold transition-all duration-500 shadow-2xl hover:shadow-3xl flex items-center justify-center border-2 overflow-hidden group ${
               isSigningOut 
                 ? "bg-gradient-to-r from-gray-600 to-gray-500 border-gray-400 cursor-not-allowed opacity-80" 
                 : "bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 border-red-400 hover:border-red-300 cursor-pointer transform hover:scale-110 active:scale-95"
@@ -517,13 +517,13 @@ export const ClubDoorScene: React.FC<ClubDoorSceneProps> = ({
               isSigningOut ? 'text-gray-200' : 'text-white'
             }`} style={{
               textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-              fontSize: '1.1rem'
+              fontSize: '1rem'
             }}>
-              {isSigningOut ? "Signing Out..." : "Sign Out"}
+              {isSigningOut ? "Signing Out..." : "Signout"}
             </span>
             
             {/* Hover glow effect */}
-            <div className={`absolute inset-0 rounded-2xl transition-all duration-300 ${
+            <div className={`absolute inset-0 rounded-xl transition-all duration-300 ${
               isSigningOut ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'
             }`} style={{
               background: 'radial-gradient(circle at center, rgba(239,68,68,0.3) 0%, transparent 70%)',
