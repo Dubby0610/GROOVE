@@ -106,15 +106,14 @@ function AppRoutes() {
     preserveBackgroundMusic(); // Preserve background music during transition
     setIsLoading(true);
     setLoadingMessage('Entering the club...');
-    setLoadingAudioFile(undefined); // NO audio during this phase
-    setIsDeterminingFloor(true);
+    // setIsDeterminingFloor(true);
     setLoadingAudioFile(undefined);
     setTimeout(() => {
       setIsLoading(false);
       setLoadingMessage(undefined);
       navigate('/club-success');
       // Allow full 7-second audio playback before transitioning to club scene
-      setTimeout(() => setIsDeterminingFloor(false), 8000); // Show loading for 8s to allow full audio
+      // setTimeout(() => setIsDeterminingFloor(false), 8000); // Show loading for 8s to allow full audio
     }, 2000);
   };
 
