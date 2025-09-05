@@ -158,7 +158,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
   return (
     <div className="flex flex-col lg:flex-row w-full h-screen bg-black">
       {/* Loading screen */}
-      {isElevatorLoading && <LoadingScreen message="Calling the elevator..." />}
+      {isElevatorLoading && <LoadingScreen />}
       {/* Left: Elevator 3D + Floor Buttons */}
       <div className="relative w-full lg:w-2/5 h-96 lg:h-screen bg-black flex-1">
         <ThreeElevatorScene
@@ -299,7 +299,7 @@ export const ElevatorScene: React.FC<ElevatorSceneProps> = ({
           </button>
         </div>
         <div className="text-lg text-white mb-2 text-center">
-          {isElevatorAnimating ? "Elevator in motion..." : "Click image to Go"}
+          {isElevatorAnimating ? " " : "Click image to Go"}
         </div>
         <div className="text-xl lg:text-2xl text-amber-400 font-bold mb-4 text-center">
           {FLOOR_LABELS[(currentFloor - 1) % FLOOR_IMAGES.length]}

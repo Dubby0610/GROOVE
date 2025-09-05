@@ -24,13 +24,12 @@ function MainPage() {
 }
 
 function AppRoutes() {
-  const { playDiscoTrack, playElevatorSound, playDJVoiceOver } = useAudio();
+  const { playDJVoiceOver } = useAudio();
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState<string | undefined>(undefined);
   const [loadingAudioFile, setLoadingAudioFile] = useState<string | undefined>(undefined);
   const [selectedClubFloor, setSelectedClubFloor] = useState<number | null>(null);
   // Add a state to track if club floor is being determined
-  const [isDeterminingFloor, setIsDeterminingFloor] = useState(false);
+  const [isDeterminingFloor] = useState(false);
 
   // Global audio management - preserve background music during transitions
   const preserveBackgroundMusic = () => {
@@ -50,20 +49,6 @@ function AppRoutes() {
     });
   };
 
-  const stopPreservedBackgroundMusic = () => {
-    console.log('🛑 Stopping preserved background music...');
-    
-    // Stop all preserved background music
-    const audioElements = document.querySelectorAll('audio');
-    audioElements.forEach(audio => {
-      if ((audio as any).preservedDuringTransition) {
-        console.log('🛑 Stopping preserved background music:', audio.src);
-        audio.pause();
-        audio.currentTime = 0;
-        (audio as any).preservedDuringTransition = false;
-      }
-    });
-  };
 
   const navigate = useNavigate();
 
@@ -77,11 +62,9 @@ function AppRoutes() {
   const handleEnterBuilding = () => {
     preserveBackgroundMusic(); // Preserve background music during transition
     setIsLoading(true);
-    setLoadingMessage('Calling the elevator...');
     setLoadingAudioFile(undefined); // Clear any previous audio file
     setTimeout(() => {
       setIsLoading(false);
-      setLoadingMessage(undefined);
       navigate('/elevator');
     }, 1800);
   };
@@ -92,11 +75,9 @@ function AppRoutes() {
     setSelectedClubFloor(floor);
     localStorage.setItem("selectedClubFloor", String(floor));
     setIsLoading(true);
-    setLoadingMessage("Arriving at the club...");
     setLoadingAudioFile(undefined); // IMPORTANT: Clear any previous audio file
     setTimeout(() => {
       setIsLoading(false);
-      setLoadingMessage(undefined);
       navigate('/club-door');
     }, 1000); // Show loading for 1s
   };
@@ -105,12 +86,10 @@ function AppRoutes() {
   const handleEnterClub = () => {
     preserveBackgroundMusic(); // Preserve background music during transition
     setIsLoading(true);
-    setLoadingMessage('Entering the club...');
     // setIsDeterminingFloor(true);
     setLoadingAudioFile(undefined);
     setTimeout(() => {
       setIsLoading(false);
-      setLoadingMessage(undefined);
       navigate('/club-success');
       // Allow full 7-second audio playback before transitioning to club scene
       // setTimeout(() => setIsDeterminingFloor(false), 8000); // Show loading for 8s to allow full audio
@@ -119,7 +98,7 @@ function AppRoutes() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {isLoading && <LoadingScreen message={loadingMessage} audioFile={loadingAudioFile} />}
+      {isLoading && <LoadingScreen audioFile={loadingAudioFile} />}
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/alley" element={<AlleyScene onEnterBuilding={handleEnterBuilding} />} />
@@ -140,7 +119,6 @@ function AppRoutes() {
             (selectedClubFloor || localStorage.getItem("selectedClubFloor")) ? (
               isDeterminingFloor ? (
                 <LoadingScreen 
-                  message="Loading your club experience..." 
                   audioFile={undefined}
                 />
               ) : (

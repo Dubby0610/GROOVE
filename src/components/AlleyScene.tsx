@@ -90,7 +90,7 @@ export const AlleyScene: React.FC<AlleySceneProps> = ({ onEnterBuilding }) => {
         loop
         style={{ display: 'none' }}
       />
-      {isLoading && <LoadingScreen message="Loading alley..." />}
+      {isLoading && <LoadingScreen />}
       {/* Three.js scene */}
       <ThreeAlleyScene 
         onEnterBuilding={onEnterBuilding}

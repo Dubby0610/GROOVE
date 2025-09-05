@@ -95,7 +95,7 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
     setTimeout(() => {
       console.log('🎵 Starting DJ Barry audio 2 seconds after models loaded');
       const djBarryAudio = new Audio('/sounds/Dj_Barry_dancefloor line.mp3');
-      djBarryAudio.volume = 0.7;
+      djBarryAudio.volume = 0.9;
       djBarryAudio.loop = false;
       
       // Store globally so it doesn't stop when component unmounts
@@ -343,7 +343,7 @@ const NightClubScene: React.FC<NightClubSceneProps> = ({ floor }) => {
       
       <ThreeNightClubScene floor={floor} onLoaded={handleModelsLoaded} />
       {isLoading && (
-        <LoadingScreen message="Loading your club experience..." />
+        <LoadingScreen />
       )}
       {/* Enhanced Logout Button - Moved to top-right */}
       <div className="absolute top-6 right-6">
