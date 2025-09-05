@@ -78,60 +78,36 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-900 via-black to-indigo-900 flex items-center justify-center z-50 overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0">
-        {/* Floating particles */}
-        <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-purple-400 rounded-full animate-pulse opacity-60"></div>
-        <div className="absolute top-1/3 right-1/3 w-1 h-1 bg-pink-400 rounded-full animate-pulse opacity-80" style={{ animationDelay: '0.5s' }}></div>
-        <div className="absolute bottom-1/3 left-1/3 w-3 h-3 bg-blue-400 rounded-full animate-pulse opacity-40" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute bottom-1/4 right-1/4 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse opacity-70" style={{ animationDelay: '1.5s' }}></div>
-        <div className="absolute top-1/2 left-1/6 w-2 h-2 bg-violet-400 rounded-full animate-pulse opacity-50" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-2/3 right-1/6 w-1 h-1 bg-fuchsia-400 rounded-full animate-pulse opacity-90" style={{ animationDelay: '2.5s' }}></div>
-        
-        {/* Animated rings */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="w-32 h-32 border border-purple-500/30 rounded-full animate-spin" style={{ animationDuration: '8s' }}></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 border border-pink-500/40 rounded-full animate-spin" style={{ animationDuration: '6s', animationDirection: 'reverse' }}></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border border-blue-500/50 rounded-full animate-spin" style={{ animationDuration: '4s' }}></div>
-        </div>
+    <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
+      <div className="text-center">
+        <div className="mb-8">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
         
-      {/* Main loading content */}
-      <div className="relative z-10 flex flex-col items-center">
-        {/* Central pulsing orb */}
-        <div className="relative mb-8">
-          <div className="w-20 h-20 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-full animate-pulse shadow-2xl shadow-purple-500/50"></div>
-          <div className="absolute inset-0 w-20 h-20 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-full animate-ping opacity-20"></div>
-          <div className="absolute inset-2 w-16 h-16 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full animate-pulse opacity-60"></div>
-        </div>
         
-        {/* Audio button if needed */}
+        {/* DJ Barry Audio Button */}
         {audioFile && !audioStarted && (
-          <div className="mb-6">
+          <div className="mt-6">
             <button
               onClick={startDJBarryAudio}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 text-white font-bold rounded-full shadow-2xl hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 hover:shadow-purple-500/50"
+              className="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white font-bold rounded-full shadow-lg hover:from-green-600 hover:to-blue-600 transition-all duration-300 transform hover:scale-105"
             >
-              🎵 Start Audio
+              🎵 Click to Start Audio
             </button>
           </div>
         )}
         
-        {/* Animated dots */}
-        <div className="flex justify-center space-x-3">
-          <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-purple-600 rounded-full animate-bounce"></div>
-          <div className="w-3 h-3 bg-gradient-to-r from-pink-400 to-pink-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-          <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-          <div className="w-3 h-3 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
-          <div className="w-3 h-3 bg-gradient-to-r from-violet-400 to-violet-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+        {/* {audioStarted && (
+          <div className="mt-6 text-green-400 font-semibold">
+            🎵 DJ Barry Audio Playing!
+          </div>
+        )} */}
+        
+        <div className="mt-4 flex justify-center space-x-2">
+          <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+          <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+          <div className="w-2 h-2 bg-pink-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
         </div>
-      </div>
-
-      {/* Ambient light effects */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-purple-500/10 via-transparent to-blue-500/10 animate-pulse"></div>
-        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-b from-pink-500/10 via-transparent to-purple-500/10 animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
     </div>
   );

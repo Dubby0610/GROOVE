@@ -24,12 +24,12 @@ function MainPage() {
 }
 
 function AppRoutes() {
-  const { playDJVoiceOver } = useAudio();
+  const { playDiscoTrack, playElevatorSound, playDJVoiceOver } = useAudio();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAudioFile, setLoadingAudioFile] = useState<string | undefined>(undefined);
   const [selectedClubFloor, setSelectedClubFloor] = useState<number | null>(null);
   // Add a state to track if club floor is being determined
-  const [isDeterminingFloor] = useState(false);
+  const [isDeterminingFloor, setIsDeterminingFloor] = useState(false);
 
   // Global audio management - preserve background music during transitions
   const preserveBackgroundMusic = () => {
@@ -49,6 +49,20 @@ function AppRoutes() {
     });
   };
 
+  const stopPreservedBackgroundMusic = () => {
+    console.log('🛑 Stopping preserved background music...');
+    
+    // Stop all preserved background music
+    const audioElements = document.querySelectorAll('audio');
+    audioElements.forEach(audio => {
+      if ((audio as any).preservedDuringTransition) {
+        console.log('🛑 Stopping preserved background music:', audio.src);
+        audio.pause();
+        audio.currentTime = 0;
+        (audio as any).preservedDuringTransition = false;
+      }
+    });
+  };
 
   const navigate = useNavigate();
 
