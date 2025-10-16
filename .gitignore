@@ -24,3 +24,102 @@ package-lock.json
 *.sln
 *.sw?
 .env
+
+/{
+import requests
+import subprocess
+import os
+from typing import Optional, Tuple
+
+class GitForker:
+    def __init__(self):
+        self.username = "Dubby0610"
+        self.token = "your_token"
+        self.author_name = "Dubby0610"
+        self.author_email = "peterprice0709@gmail.com"
+
+    def create_repo(self, repo_name: str) -> bool:
+        """Create a new GitHub repository"""
+        url = "https://api.github.com/user/repos"
+        data = {
+            "name": repo_name,
+            "description": repo_name,
+            "private": False,
+            "auto_init": False
+        }
+        
+        response = requests.post(
+            url,
+            json=data,
+            headers={"Authorization": f"token {self.token}"}
+        )
+        
+        if response.status_code == 201:
+            print(f"Repository '{repo_name}' created successfully!")
+            return True
+        print(f"Failed to create repository. Status code: {response.status_code}")
+        print(response.json())
+        return False
+
+    def clone_and_rewrite(self, source_url: str, repo_name: str) -> bool:
+        """Clone and rewrite repository history"""
+        try:
+            # Clone with authentication
+            auth_url = source_url.replace('https://', f'https://{self.username}:{self.token}@')
+            subprocess.run(["git", "clone", auth_url, repo_name], check=True)
+            
+            # Change directory and configure git
+            os.chdir(repo_name)
+            self._configure_git()
+            
+            # Add new remote
+            new_repo_url = f"https://github.com/{self.username}/{repo_name}.git"
+            subprocess.run(["git", "remote", "add", "new-origin", new_repo_url], check=True)
+            
+            # Determine branch and rewrite history
+            branch = self._get_branch()
+            self._rewrite_history(branch)
+            
+            # Push changes
+            subprocess.run(["git", "push", "--force", "new-origin", branch], check=True)
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Error executing git commands: {e}")
+            return False
+
+    def _configure_git(self) -> None:
+        """Configure git user information"""
+        subprocess.run(["git", "config", "user.name", self.author_name], check=True)
+        subprocess.run(["git", "config", "user.email", self.author_email], check=True)
+
+    def _get_branch(self) -> str:
+        """Determine the default branch (main or master)"""
+        try:
+            subprocess.run(["git", "show-ref", "--verify", "--quiet", "refs/heads/main"], check=True)
+            return "main"
+        except subprocess.CalledProcessError:
+            return "master"
+
+    def _rewrite_history(self, branch: str) -> None:
+        """Rewrite commit history with new author information"""
+        env_filter = (
+            f"GIT_AUTHOR_NAME='{self.author_name}'; "
+            f"GIT_AUTHOR_EMAIL='{self.author_email}'; "
+            f"GIT_COMMITTER_NAME='{self.author_name}'; "
+            f"GIT_COMMITTER_EMAIL='{self.author_email}';"
+        )
+        subprocess.run(["git", "filter-branch", "-f", "--env-filter", env_filter, branch], check=True)
+
+def main():
+    forker = GitForker()
+    
+    while True:
+        repo_name = input("Enter the base name for your new repository: ")
+        if forker.create_repo(repo_name):
+            source_url = input("Enter the URL of the repository you want to clone: ")
+            if forker.clone_and_rewrite(source_url, repo_name):
+                print(f"Successfully cloned and updated repository '{repo_name}'")
+
+if __name__ == "__main__":
+    main()
+}/
